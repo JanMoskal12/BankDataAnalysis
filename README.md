@@ -1,22 +1,24 @@
-# BankDataAnalysis
+# Bank Data Analysis
 
-Variables:
-1 - age
-2 - job : type of job
-3 - marital : marital status
-4 - education
-5 - default: has credit in default?
-6 - balance: average yearly balance, in euros 
-7 - housing: has housing loan?
-8 - loan: has personal loan?
-related with the last contact of the current campaign:
-9 - contact: contact communication type 
-10 - day: last contact day of the month
-11 - month: last contact month of year
-12 - duration: last contact duration, in seconds
-other attributes:
-13 - campaign: number of contacts performed during this campaign and for this client
-14 - pdays: number of days that passed by after the client was last contacted from a previous campaign
-15 - previous: number of contacts performed before this campaign and for this client
-16 - poutcome: outcome of the previous marketing campaign
-17 - y - has the client subscribed a term deposit? (indicator if product (bank term deposit) was ('yes') or wasn't ('no') subscribed)
+### Variables:
+1. Age
+2. Job: Type of job
+3. Marital: Marital status
+4. Education
+5. Default: Has credit in default?
+6. Balance: Average yearly balance, in euros 
+7. Housing: Has housing loan?
+8. Loan: Has personal loan?
+
+### Related with the last contact of the current campaign:
+9. Contact: Contact communication type 
+10. Day: Last contact day of the month
+11. Month: Last contact month of year
+12. Duration: Last contact duration, in seconds
+
+### Other attributes:
+13. Campaign: Number of contacts performed during this campaign and for this client
+14. Pdays: Number of days that passed by after the client was last contacted from a previous campaign
+15. Previous: Number of contacts performed before this campaign and for this client
+16. Poutcome: Outcome of the previous marketing campaign
+17. Y: Has the client subscribed a term deposit? (Indicator if product (bank term deposit) was ('yes') or wasn't ('no') subscribed)
