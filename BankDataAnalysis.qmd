@@ -1,0 +1,194 @@
+---
+title: "BankDataAnalysis"
+format: html
+editor: visual
+---
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+#| label: Reading libraries and data
+
+library(tidyverse)
+library(tidymodels)
+library(lubridate)
+library(scales)
+library(randomForest)
+library(caret)
+
+data <- read_csv2("bank-full.csv")
+```
+
+```{r, include=FALSE, echo=FALSE}
+#| label: Viewing data
+
+View(data)
+glimpse(data)
+
+data %>%
+  lapply(unique)
+
+data %>%
+  is.na() %>%
+  summary() # No missing values
+```
+
+```{r}
+#| label: Cleaning data
+
+data$age <- cut(data$age,
+  breaks = c(17, 25, 40, 60, 100),
+  labels = c("Younger Adults", "Middle-Aged Adults", "Older Adults", "Seniors")
+)
+
+data$month <- match(data$month, tolower(month.abb))
+
+data <- data %>%
+  mutate(date = make_date(2000, month, day), .before = day) %>% # I took a random year because it doesn't matter
+  select(-c(day, month))
+
+
+data <- data %>%
+  mutate(
+    across(c(age, job, marital, education, contact, poutcome), as.factor),
+    across(c(default, housing, loan, y), ~ if_else(. == "yes", TRUE, FALSE)),
+    across(c(default, housing, loan, y), as.logical),
+    across(c(balance, duration, campaign, pdays), as.integer)
+  )
+
+data_summary <- summary(data)
+saveRDS(data, "cleaned_data.rds")
+```
+
+```{r}
+Data <- readRDS("cleaned_data.rds")
+```
+
+## Distribution of customers' ages: What is the distribution of customers' ages? Are there any dominant age groups?
+
+```{r}
+Data %>%
+  ggplot(aes(x = age, fill = age)) +
+  geom_bar() +
+  scale_x_discrete(name = NULL) +
+  scale_y_continuous(name = "Number of clients", labels = scales::label_number_si()) +
+  theme(legend.position = "none")
+```
+
+Conclusions: The data has lots of "Middle-Aged Adults" and "Older Adults," showing they're focused on. But there aren't as many "Younger Adults" or "Seniors," so they might not have been as important in the campaign.
+
+## Relationship between age and deposit subscription: Is there a connection between age and subscribing to a deposit? Are certain age groups more inclined towards subscribing?
+
+```{r}
+Data %>%
+  group_by(age) %>%
+  ggplot(aes(x = age, fill = y)) +
+  geom_bar(position = "fill") +
+  labs(x = NULL, y = "Proportion of term deposit subscriptions", fill = "Has the client subscribed a term deposit?")
+```
+
+Conclusions: There appears to be a correlation between age and subscribing to a deposit. Younger Adults and Seniors show a higher inclination towards subscribing to deposits compared to Middle-Aged and Older Adults.
+
+## Annual balance and subscription: Is the average annual balance of clients connected to deposit subscription?
+
+```{r}
+Data %>%
+  group_by(y) %>%
+  summarise(avg_balance = mean(balance)) %>%
+  ggplot(aes(x = y, y = avg_balance, fill = y)) +
+  geom_bar(stat = "identity")
+```
+
+## Contact duration and subscription: Does the duration of the last contact relate to deposit subscription?
+
+```{r}
+Data %>%
+  mutate(
+    duration = duration / 60,
+    duration_group = cut(duration, breaks = c(-1, 5, 15, max(duration) + 1), labels = c("Short", "Long", "Very long")), right = TRUE
+  ) %>%
+  group_by(duration_group) %>%
+  ggplot(aes(x = duration_group, fill = y)) +
+  geom_bar(position = "dodge")
+```
+
+Conclusions: There seems to be a relationship between the duration of the last contact and deposit subscription. Longer contacts tend to have a higher number of deposit subscriptions compared to shorter contacts.
+
+## Is there a correlation between outcome of the prevoius campaign and the subscription to a term deposit in the current campaign?
+
+```{r}
+Data %>%
+  ggplot(aes(x = poutcome, fill = y)) +
+  geom_bar(position = "dodge")
+
+result <- Data %>%
+  count(poutcome, y) %>%
+  pivot_wider(names_from = poutcome, values_from = n, values_fill = list(n = 0))
+
+result
+```
+
+Conclusions: This implies that the outcome of the previous campaign might influence the subscription behavior in the current campaign, suggesting a correlation between these variables.
+
+## Is the marital status of clients (Marital) correlated with the subscription to a term deposit (Y)?
+
+```{r}
+Data %>%
+  ggplot(aes(x = marital, fill = y)) +
+  geom_bar(position = "fill")
+
+Data %>%
+  Data() %>%
+  group_by(marital, y) %>%
+  summarize(Count = n())
+```
+
+Conclusions: There is not a trend indicating a strong correlation between marital status and subscription to a term deposit
+
+## How does the job status relate to the subscription of a term deposit?
+
+```{r}
+Data %>%
+  ggplot(aes(x = job, fill = y)) +
+  geom_bar(position = "dodge")
+
+Data %>%
+  group_by(job, y) %>%
+  count()
+```
+
+Conclusions: The data suggests that job status might have some influence on the subscription to a term deposit, as evidenced by varying subscription counts among different job categories. Yet, this relationship isn't straightforward or consistent across all job types, indicating that other factors might also play a role in determining subscription behavior.
+
+## How does the education level relate to the subscription of a term deposit?
+
+```{r}
+Data %>%
+  ggplot(aes(x = education, fill = y)) +
+  geom_bar(position = "fill")
+```
+
+Conclusions: The data suggests a correlation between education level and the subscription to a term deposit. Higher education levels, specifically tertiary education, seem to be associated with a higher likelihood of subscribing to a term deposit.
+
+## Modeling 
+
+```{r}
+#not finished and not working
+set.seed(2000)
+splited_data <- initial_split(data, 0.9)
+train_data <- training(splited_data)
+test_data <- testing(splited_data)
+
+model <- randomForest(
+  formula = y ~ age + education + poutcome + duration,
+  data = train_data,
+  type = "classification"
+)
+
+summary(model)
+
+predictions <- predict(model, test_data)
+pred_df <- cbind(test_data, predictions)
+
+pred_df$predictions <- ifelse(pred_df$predictions > 0.5, "TRUE", "FALSE")
+pred_df$predictions <- factor(pred_df$predictions, levels = levels(pred_df$y))
+conf_matrix <- confusionMatrix(data = as.factor(pred_df$predictions), reference = as.factor(pred_df$y))
+conf_matrix
+```
