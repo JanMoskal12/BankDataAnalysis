@@ -13,6 +13,8 @@ library(lubridate)
 library(scales)
 library(randomForest)
 library(caret)
+library(class)
+library(e1071)
 
 data <- read_csv2("bank-full.csv")
 ```
@@ -82,7 +84,8 @@ Data %>%
   group_by(age) %>%
   ggplot(aes(x = age, fill = y)) +
   geom_bar(position = "fill") +
-  labs(x = NULL, y = "Proportion of term deposit subscriptions", fill = "Has the client subscribed a term deposit?")
+  labs(x = NULL, y = "Proportion of term deposit subscriptions", fill = "Has the client subscribed a term deposit?") +
+  theme(legend.position = "bottom")
 ```
 
 Conclusions: There appears to be a correlation between age and subscribing to a deposit. Younger Adults and Seniors show a higher inclination towards subscribing to deposits compared to Middle-Aged and Older Adults.
@@ -108,6 +111,7 @@ Data %>%
   group_by(duration_group) %>%
   ggplot(aes(x = duration_group, fill = y)) +
   geom_bar(position = "dodge")
+
 ```
 
 Conclusions: There seems to be a relationship between the duration of the last contact and deposit subscription. Longer contacts tend to have a higher number of deposit subscriptions compared to shorter contacts.
@@ -119,11 +123,6 @@ Data %>%
   ggplot(aes(x = poutcome, fill = y)) +
   geom_bar(position = "dodge")
 
-result <- Data %>%
-  count(poutcome, y) %>%
-  pivot_wider(names_from = poutcome, values_from = n, values_fill = list(n = 0))
-
-result
 ```
 
 Conclusions: This implies that the outcome of the previous campaign might influence the subscription behavior in the current campaign, suggesting a correlation between these variables.
@@ -135,10 +134,6 @@ Data %>%
   ggplot(aes(x = marital, fill = y)) +
   geom_bar(position = "fill")
 
-Data %>%
-  Data() %>%
-  group_by(marital, y) %>%
-  summarize(Count = n())
 ```
 
 Conclusions: There is not a trend indicating a strong correlation between marital status and subscription to a term deposit
@@ -150,9 +145,6 @@ Data %>%
   ggplot(aes(x = job, fill = y)) +
   geom_bar(position = "dodge")
 
-Data %>%
-  group_by(job, y) %>%
-  count()
 ```
 
 Conclusions: The data suggests that job status might have some influence on the subscription to a term deposit, as evidenced by varying subscription counts among different job categories. Yet, this relationship isn't straightforward or consistent across all job types, indicating that other factors might also play a role in determining subscription behavior.
@@ -167,28 +159,78 @@ Data %>%
 
 Conclusions: The data suggests a correlation between education level and the subscription to a term deposit. Higher education levels, specifically tertiary education, seem to be associated with a higher likelihood of subscribing to a term deposit.
 
-## Modeling 
+## Modeling
 
 ```{r}
-#not finished and not working
+
+data <- readRDS("cleaned_data.rds")
+
 set.seed(2000)
 splited_data <- initial_split(data, 0.9)
 train_data <- training(splited_data)
 test_data <- testing(splited_data)
+```
 
-model <- randomForest(
+```{r}
+# Random Forest
+model_random_forest <- randomForest(
   formula = y ~ age + education + poutcome + duration,
   data = train_data,
   type = "classification"
 )
 
-summary(model)
+summary(model_random_forest)
 
-predictions <- predict(model, test_data)
+predictions <- predict(model_random_forest, test_data)
 pred_df <- cbind(test_data, predictions)
 
-pred_df$predictions <- ifelse(pred_df$predictions > 0.5, "TRUE", "FALSE")
+pred_df$predictions <- ifelse(pred_df$predictions > 0.5, TRUE, FALSE)
 pred_df$predictions <- factor(pred_df$predictions, levels = levels(pred_df$y))
-conf_matrix <- confusionMatrix(data = as.factor(pred_df$predictions), reference = as.factor(pred_df$y))
-conf_matrix
+conf_matrix_model_random_forest <- confusionMatrix(data = as.factor(pred_df$predictions), reference = as.factor(pred_df$y))
+
 ```
+
+
+```{r}
+# Linear SVM 
+train_data_svm <- train_data %>% select(age, education, poutcome, y) %>% mutate(y = as.integer(y))
+train_dummies <- dummyVars("~.",
+            data = train_data_svm)
+train_data_svm <- predict(train_dummies, train_data_svm)
+
+
+test_data_svm <- test_data %>% select(age, education, poutcome, y) %>% mutate(y = as.integer(y))
+test_dummies <- dummyVars("~.",
+            data = test_data_svm)
+train_data_svm <- predict(test_dummies, test_data_svm)
+
+model_svm <- svm(y ~ ., data = test_data_svm, kernel = "linear")
+predictions <- predict(model_svm, test_data_svm[, -4])
+predictions <- as.integer(ifelse(predictions > 0.5, 1, 0))
+
+result <- cbind(test_data_svm, predictions)
+conf_matrix_model_svm <- confusionMatrix(data = as.factor(result$predictions),
+                                         reference = as.factor(result$y))
+conf_matrix_model_svm
+```
+
+```{r}
+#KNN (not finished not working)
+train_data_knn <- train_data %>% select(age, education, poutcome, y) %>% mutate(y = as.integer(y))
+train_dummies_knn <- dummyVars("~.",
+            data = train_data_knn)
+train_data_knn <- predict(train_dummies_knn, train_data_knn)
+
+
+test_data_knn <- test_data %>% select(age, education, poutcome, y) %>% mutate(y = as.integer(y))
+test_dummies_knn <- dummyVars("~.",
+            data = test_data_knn)
+train_data_knn <- predict(test_dummies_knn, test_data_knn)
+
+model_knn <- knn(as.data.frame(train_data_knn),
+                 as.data.frame(test_data_knn[, -13]),
+                 cl = as.factor(train_data_knn[, 13]),
+                 k = 5)
+
+```
+
