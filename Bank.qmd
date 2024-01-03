@@ -1,0 +1,76 @@
+---
+title: "Bank"
+format: html
+editor: visual
+---
+
+```{r warning=FALSE, echo=FALSE, message=FALSE}
+library(tidyverse)
+library(readr)
+library(stargazer)
+library(ggcorrplot)
+library(rstatix)
+```
+
+```{r message=FALSE}
+Dataframe_base <- read_csv2("bank-full.csv")
+head(Dataframe_base)
+
+Dataframe <- Dataframe_base
+# rozmiar ramki danych
+dim(Dataframe)
+
+# streszczenie danych numerycznych
+Dataframe_numeric <- Dataframe[sapply(Dataframe, class) != "character"]
+summary(Dataframe_numeric)
+
+
+```
+
+```{r}
+# Sprawdzenie czy występują braki danych 
+colSums(is.na(Dataframe))
+```
+
+```{r}
+# dystrbucja wieku
+Dataframe %>% 
+  ggplot(aes(x = age))+geom_histogram(bins = 78)
+```
+
+```{r}
+# macierz korelacji
+corr <- cor_mat(Dataframe_numeric)
+p_mat <- cor_pmat(Dataframe_numeric)
+ggcorrplot(corr, p.mat = p_mat,lab = T)
+```
+
+```{r message=FALSE}
+
+
+# zamiana zmiennych typu character na numeric
+
+Dataframe$marital <- match(Dataframe$marital, c("single", "married", "divorced"))
+Dataframe$housing <- ifelse(Dataframe$housing == "yes", 1, 0)
+Dataframe$loan <- ifelse(Dataframe$loan == "yes", 1, 0)
+Dataframe$default <- ifelse(Dataframe$default == "yes", 1, 0)
+Dataframe$job <- match(Dataframe$job, unique(Dataframe$job))
+Dataframe$education <- match(Dataframe$education, unique(Dataframe$education))
+Dataframe$month <- match(Dataframe$month, tolower(month.abb))
+Dataframe$contact <- match(Dataframe$contact, unique(Dataframe$contact))
+Dataframe$poutcome <- match(Dataframe$poutcome, unique(Dataframe$poutcome))
+Dataframe$y <- ifelse(Dataframe$y == "yes", 1, 0)
+Dataframe$y <- as.factor(Dataframe$y)
+
+
+```
+
+```{r}
+# zliczenie obserwacji
+plyr::count(Dataframe, "y")
+
+ggplot(Dataframe, aes(x=y))+
+  geom_bar(fill = "lightgreen")+
+  xlab("no / yes")
+
+```
