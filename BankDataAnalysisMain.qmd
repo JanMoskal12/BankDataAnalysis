@@ -1,0 +1,145 @@
+---
+title: "BankDataMain"
+format: html
+editor: visual
+---
+
+```{r echo=FALSE, message=FALSE, warning= FALSE}
+
+library(tidyverse)
+library(tidymodels)
+library(lubridate)
+library(scales)
+library(randomForest)
+library(caret)
+library(class)
+library(e1071)
+library(ggcorrplot)
+library(rstatix)
+```
+
+
+```{r message=FALSE , echo = FALSE}
+Data <- readRDS("cleaned_data.rds")
+Dataframe_base <- read_csv2("bank-full.csv")
+```
+
+```{r}
+colSums(is.na(Data)) #Sprawdzenie braków danych
+```
+
+## Distribution of customers' ages: What is the distribution of customers' ages? Are there any dominant age groups?
+
+```{r}
+Data %>%
+  ggplot(aes(x = age, fill = age)) +
+  geom_bar() +
+  scale_x_discrete(name = NULL) +
+  scale_y_continuous(name = "Number of clients") +
+  theme(legend.position = "none")
+```
+
+Conclusions: The data has lots of "Middle-Aged Adults" and "Older Adults," showing they're focused on. But there aren't as many "Younger Adults" or "Seniors," so they might not have been as important in the campaign.
+
+## Relationship between age and deposit subscription: Is there a connection between age and subscribing to a deposit? Are certain age groups more inclined towards subscribing?
+
+```{r}
+Data %>%
+  group_by(age) %>%
+  ggplot(aes(x = age, fill = y)) +
+  geom_bar(position = "fill") +
+  labs(x = NULL, y = "Proportion of term deposit subscriptions", fill = "Has the client subscribed a term deposit?") +
+  theme(legend.position = "bottom")
+```
+
+Conclusions: There appears to be a correlation between age and subscribing to a deposit. Younger Adults and Seniors show a higher inclination towards subscribing to deposits compared to Middle-Aged and Older Adults.
+
+## Annual balance and subscription: Is the average annual balance of clients connected to deposit subscription?
+
+```{r}
+Data %>%
+  group_by(y) %>%
+  summarise(avg_balance = mean(balance)) %>%
+  ggplot(aes(x = y, y = avg_balance, fill = y)) +
+  geom_bar(stat = "identity")
+```
+
+## Contact duration and subscription: Does the duration of the last contact relate to deposit subscription?
+
+```{r}
+Data %>%
+  mutate(
+    duration = duration / 60,
+    duration_group = cut(duration, breaks = c(-1, 5, 15, max(duration) + 1), labels = c("Short", "Long", "Very long")), right = TRUE
+  ) %>%
+  group_by(duration_group) %>%
+  ggplot(aes(x = duration_group, fill = y)) +
+  geom_bar(position = "dodge")
+
+```
+
+Conclusions: There seems to be a relationship between the duration of the last contact and deposit subscription. Longer contacts tend to have a higher number of deposit subscriptions compared to shorter contacts.
+
+## Is there a correlation between outcome of the prevoius campaign and the subscription to a term deposit in the current campaign?
+
+```{r}
+Data %>%
+  ggplot(aes(x = poutcome, fill = y)) +
+  geom_bar(position = "dodge")
+
+```
+
+Conclusions: This implies that the outcome of the previous campaign might influence the subscription behavior in the current campaign, suggesting a correlation between these variables.
+
+## Is the marital status of clients (Marital) correlated with the subscription to a term deposit (Y)?
+
+```{r}
+Data %>%
+  ggplot(aes(x = marital, fill = y)) +
+  geom_bar(position = "fill")
+
+```
+
+Conclusions: There is not a trend indicating a strong correlation between marital status and subscription to a term deposit
+
+## How does the job status relate to the subscription of a term deposit?
+
+```{r}
+Data %>%
+  ggplot(aes(x = job, fill = y)) +
+  geom_bar(position = "dodge")
+
+```
+
+Conclusions: The data suggests that job status might have some influence on the subscription to a term deposit, as evidenced by varying subscription counts among different job categories. Yet, this relationship isn't straightforward or consistent across all job types, indicating that other factors might also play a role in determining subscription behavior.
+
+## How does the education level relate to the subscription of a term deposit?
+
+```{r}
+Data %>%
+  ggplot(aes(x = education, fill = y)) +
+  geom_bar(position = "fill")
+```
+
+Conclusions: The data suggests a correlation between education level and the subscription to a term deposit. Higher education levels, specifically tertiary education, seem to be associated with a higher likelihood of subscribing to a term deposit.
+
+
+```{r}
+# macierz korelacji
+
+Dataframe_numeric <- Dataframe_base[sapply(Dataframe_base, class) != "character"]
+
+corr <- cor_mat(Dataframe_numeric)
+p_mat <- cor_pmat(Dataframe_numeric)
+ggcorrplot(corr, p.mat = p_mat,lab = T)
+```
+
+```{r}
+plyr::count(Data, "y")
+
+ggplot(Data, aes(x=y))+
+  geom_bar(fill = "lightgreen")
+```
+
+
+
