@@ -1,0 +1,116 @@
+---
+title: "Portugalski Bank"
+format: html
+editor: visual
+---
+
+```{r}
+library(dplyr)
+library(openxlsx)
+library(ggplot2)
+library(ggcorrplot)
+```
+
+```{r}
+dane <- read.xlsx("bankP.xlsx")
+```
+
+```{r}
+colSums(is.na(dane)) #Nie ma brakujących wartości
+```
+
+```{r}
+head(dane)
+```
+
+```{r}
+table(dane$job, dane$y)
+table(dane$marital, dane$y)
+table(dane$education, dane$y)
+table(dane$default, dane$y)
+table(dane$housing, dane$y)
+table(dane$loan, dane$y)
+table(dane$contact, dane$y)
+table(dane$month, dane$y)
+table(dane$poutcome, dane$y)
+```
+
+```{r}
+tabela_k <- table(dane$y, sign(dane$balance))
+
+print(tabela_k) #-1 dla wartości ujemnych, 0 dla zerowych i 1 dla dodatnich
+```
+
+```{r}
+hist(dane$age, 
+     main = "Rozkład wieku",      
+     xlab = "Wiek",                 
+     ylab = "Częstość",             
+     col = "lightblue",             
+     border = "black",               
+     breaks = 20)                   
+
+grid()
+```
+
+```{r}
+hist(dane$balance, 
+     main = "Rozkład salda",      
+     xlab = "Saldo",                
+     ylab = "Częstość",           
+     col = "lightgreen",            
+     border = "black",              
+     breaks = 20,                   
+     xlim = c(-10000, 25000))                   
+
+grid()
+```
+
+```{r}
+correlation_num_variables <- select(dane, c("age", "balance", "duration", "campaign", "pdays", "previous"))
+
+corr <- round(cor(correlation_num_variables),2)
+
+p_mat <- cor_pmat(correlation_num_variables)
+
+ggcorrplot(corr, lab = TRUE, p.mat = p_mat)
+```
+
+```{r}
+ggplot(dane, aes(x = marital, fill = y)) +
+  geom_bar(position = "stack") +
+  labs(title = "Czy stan cywilny klienta wpływa na decyzję o subskrypcji",
+       x = "",
+       y = "",
+       fill = "Czy klient subskrybuje?")
+```
+
+```{r}
+ggplot(dane, aes(x = y, y = age, fill = y)) +
+  geom_boxplot() +
+  labs(title = "Relacja między wiekiem a subskrybcją",
+       x = "",
+       y = "Wiek",
+       fill = "Subskrybcja")
+```
+
+```{r}
+ggplot(dane, aes(x = job, fill = y)) +
+  geom_bar(position = "stack") +
+  labs(title = "Czy praca klienta wpływa na decyzję o subskrypcji",
+       x = "",
+       y = "",
+       fill = "Czy klient subskrybuje?") +
+  theme(plot.title = element_text(hjust = 0.5),
+          axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+ggplot(dane, aes(x = y, y = balance, fill = y)) +
+  geom_boxplot() +
+  labs(title = "Relacja między saldem a subskrybcją",
+       x = "",
+       y = "Saldo",
+       fill = "Subskrybcja",
+       xlim = c(-90000, 90000))
+```
