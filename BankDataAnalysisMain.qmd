@@ -141,5 +141,59 @@ ggplot(Data, aes(x=y))+
   geom_bar(fill = "lightgreen")
 ```
 
+## Modeling
+
+```{r}
+
+data <- readRDS("cleaned_data.rds")
+
+set.seed(2000)
+splited_data <- initial_split(data, 0.9)
+train_data <- training(splited_data)
+test_data <- testing(splited_data)
+```
+
+```{r}
+# Random Forest
+model_random_forest <- randomForest(
+  formula = y ~ age + education + poutcome + duration,
+  data = train_data,
+  type = "classification"
+)
+
+summary(model_random_forest)
+
+predictions <- predict(model_random_forest, test_data)
+pred_df <- cbind(test_data, predictions)
+
+pred_df$predictions <- ifelse(pred_df$predictions > 0.5, TRUE, FALSE)
+
+conf_matrix_model_random_forest <- confusionMatrix(data = as.factor(pred_df$predictions), reference = as.factor(pred_df$y))
+
+conf_matrix_model_random_forest
+```
+
+```{r}
+# Linear SVM 
+train_data_svm <- train_data %>% select(age, education, poutcome, y) %>% mutate(y = as.integer(y))
+train_dummies <- dummyVars("~.",
+            data = train_data_svm)
+train_data_svm <- predict(train_dummies, train_data_svm)
+
+
+test_data_svm <- test_data %>% select(age, education, poutcome, y) %>% mutate(y = as.integer(y))
+test_dummies <- dummyVars("~.",
+            data = test_data_svm)
+train_data_svm <- predict(test_dummies, test_data_svm)
+
+model_svm <- svm(y ~ ., data = test_data_svm, kernel = "linear")
+predictions <- predict(model_svm, test_data_svm[, -4])
+predictions <- as.integer(ifelse(predictions > 0.5, 1, 0))
+
+result <- cbind(test_data_svm, predictions)
+conf_matrix_model_svm <- confusionMatrix(data = as.factor(result$predictions),
+                                         reference = as.factor(result$y))
+conf_matrix_model_svm
+```
 
 
