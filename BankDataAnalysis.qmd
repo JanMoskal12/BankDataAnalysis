@@ -15,6 +15,7 @@ library(randomForest)
 library(caret)
 library(class)
 library(e1071)
+library(ROSE)
 
 data <- read_csv2("bank-full.csv")
 ```
@@ -190,7 +191,6 @@ conf_matrix_model_random_forest <- confusionMatrix(data = as.factor(pred_df$pred
 
 ```
 
-
 ```{r}
 # Linear SVM 
 train_data_svm <- train_data %>% select(age, education, poutcome, y) %>% mutate(y = as.integer(y))
@@ -215,7 +215,7 @@ conf_matrix_model_svm
 ```
 
 ```{r}
-#KNN (not finished not working)
+# KNN 
 train_data_knn <- train_data %>% select(age, education, poutcome, y) %>% mutate(y = as.integer(y))
 train_dummies_knn <- dummyVars("~.",
             data = train_data_knn)
@@ -225,12 +225,20 @@ train_data_knn <- predict(train_dummies_knn, train_data_knn)
 test_data_knn <- test_data %>% select(age, education, poutcome, y) %>% mutate(y = as.integer(y))
 test_dummies_knn <- dummyVars("~.",
             data = test_data_knn)
-train_data_knn <- predict(test_dummies_knn, test_data_knn)
+test_data_knn <- predict(test_dummies_knn, test_data_knn)
 
-model_knn <- knn(as.data.frame(train_data_knn),
+train_data_knn <- janitor::clean_names(train_data_knn)
+
+oversampled_train <- ROSE(formula = y ~ ., data = as.data.frame(train_data_knn), seed = 42)$data
+
+
+model_knn <- knn(as.data.frame(oversampled_train[,-13]),
                  as.data.frame(test_data_knn[, -13]),
                  cl = as.factor(train_data_knn[, 13]),
-                 k = 5)
+                 k = 5,
+                 prob = TRUE,
+                 use.all = TRUE)
 
+conf_matrix_model_knn <- confusionMatrix(data = model_knn, reference = as.factor(test_data_knn[, 13]))
 ```
 
