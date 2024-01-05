@@ -10,6 +10,10 @@ library(readr)
 library(stargazer)
 library(ggcorrplot)
 library(rstatix)
+library(rpart)
+library(ROSE)
+library(tidymodels)
+library(randomForest)
 ```
 
 ```{r message=FALSE}
@@ -36,6 +40,7 @@ colSums(is.na(Dataframe))
 # dystrbucja wieku
 Dataframe %>% 
   ggplot(aes(x = age))+geom_histogram(bins = 78)
+  
 ```
 
 ```{r}
@@ -63,6 +68,11 @@ Dataframe$y <- ifelse(Dataframe$y == "yes", 1, 0)
 Dataframe$y <- as.factor(Dataframe$y)
 
 
+
+
+
+
+
 ```
 
 ```{r}
@@ -74,3 +84,119 @@ ggplot(Dataframe, aes(x=y))+
   xlab("no / yes")
 
 ```
+
+```{r}
+library(imbalance)
+
+
+#table(Dataframe$y)
+
+
+#Dataframe$y <- as.factor(ifelse(Dataframe$y == 1, "positve", "negative"))
+
+
+
+#imbalanceRatio(Dataframe, "y")
+
+#newRACOG <- racog(Dataframe, numInstances = 100,classAttr = "y")
+
+#newMWMOTE <- mwmote(Dataframe, numInstances = 100, classAttr = "y")
+```
+
+podział danych
+```{r}
+set.seed(2000)
+
+#podział danych na zbiór testowy i treingowy
+data_split <- initial_split(Dataframe, 0.85)
+train_data <- training(data_split)
+test_data <- testing(data_split)
+
+
+# zastosowanie paczki rose do zbalansowania danych
+data_rose <- ROSE(y ~ ., data = train_data, seed = 1)$data
+
+#zliczenie obserwacji bo zbalansowaniu
+table(data_rose$y)
+```
+
+Decision tree
+```{r}
+#model na danych zbalansowanych
+tree_rose <- rpart(y ~ ., data = data_rose)
+
+#model na danych niezbalansowanych
+tree2 <- rpart(y ~ ., data = train_data)
+
+#predykcje modeli
+pred_rose <- predict(tree_rose, newdata = test_data)
+pred_unbalanced <- predict(tree2, newdata = test_data)
+
+#AUC rose
+roc.curve(test_data$y, pred_rose[,2])
+
+#AUC unbalanced
+roc.curve(test_data$y, pred_unbalanced[,2])
+
+```
+
+Random forest
+```{r}
+model_random_forest <- randomForest(
+  formula = y ~ .,
+  data = data_rose,
+  type = "classification"
+)
+
+#predykcje
+predictions <- predict(model_random_forest, test_data)
+
+# ramka danych łącząca predykcje z rzeczywistymi danymi
+pred_df <- bind_cols(predictions, "target" = test_data$y)
+
+#confusion matrix
+conf_matrix_random_forest <- conf_mat(data = pred_df, truth = "target", estimate = "...1")
+
+conf_matrix_random_forest$table
+
+
+roc.curve(test_data$y, predictions)
+```
+
+Regresja logistyczna
+```{r}
+#model regresji logistycznej
+logreg_model <- logistic_reg(mode = "classification",
+                           engine = "glm")
+
+#definicja przepisu
+reg_rec <- recipe(y ~ ., data = data_rose) %>%
+  step_normalize() #normalizacja danych
+
+#tworzenie przepływu pracy
+reg_wf <- workflow() %>%
+  add_model(logreg_model) %>%
+  add_recipe(reg_rec)
+
+#uczenie modelu
+reg_wf_fit <- reg_wf %>% 
+  fit(data = data_rose)
+
+reg_wf_fit
+
+#predykcje
+reg_pred <- predict(reg_wf_fit,test_data) #ramka danych z predykcją
+head(reg_pred)
+
+#ramka danych łączoa predykcje z rzeczywistymi danymi
+reg_df <- bind_cols(reg_pred, "target" = test_data$y)
+head(reg_df)
+
+#confusion matrix
+conf_reg <- conf_mat(reg_df, truth = "target", estimate = ".pred_class")
+
+conf_reg %>% 
+  autoplot(type = "heatmap")
+```
+
+
