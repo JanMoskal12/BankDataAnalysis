@@ -18,8 +18,10 @@ library(e1071)
 library(ROSE)
 
 data <- read_csv2("bank-full.csv")
+data_modeling <- data
 ```
 
+# Visualization
 ```{r, include=FALSE, echo=FALSE}
 #| label: Viewing data
 
@@ -35,7 +37,7 @@ data %>%
 ```
 
 ```{r}
-#| label: Cleaning data
+#| label: Cleaning data for visualization
 
 data$age <- cut(data$age,
   breaks = c(17, 25, 40, 60, 100),
@@ -58,7 +60,7 @@ data <- data %>%
   )
 
 data_summary <- summary(data)
-saveRDS(data, "cleaned_data.rds")
+saveRDS(data, "cleaned_visualization_data.rds")
 ```
 
 ```{r}
@@ -66,7 +68,6 @@ Data <- readRDS("cleaned_data.rds")
 ```
 
 ## Distribution of customers' ages: What is the distribution of customers' ages? Are there any dominant age groups?
-
 ```{r}
 Data %>%
   ggplot(aes(x = age, fill = age)) +
@@ -79,7 +80,6 @@ Data %>%
 Conclusions: The data has lots of "Middle-Aged Adults" and "Older Adults," showing they're focused on. But there aren't as many "Younger Adults" or "Seniors," so they might not have been as important in the campaign.
 
 ## Relationship between age and deposit subscription: Is there a connection between age and subscribing to a deposit? Are certain age groups more inclined towards subscribing?
-
 ```{r}
 Data %>%
   group_by(age) %>%
@@ -92,7 +92,6 @@ Data %>%
 Conclusions: There appears to be a correlation between age and subscribing to a deposit. Younger Adults and Seniors show a higher inclination towards subscribing to deposits compared to Middle-Aged and Older Adults.
 
 ## Annual balance and subscription: Is the average annual balance of clients connected to deposit subscription?
-
 ```{r}
 Data %>%
   group_by(y) %>%
@@ -102,7 +101,6 @@ Data %>%
 ```
 
 ## Contact duration and subscription: Does the duration of the last contact relate to deposit subscription?
-
 ```{r}
 Data %>%
   mutate(
@@ -118,7 +116,6 @@ Data %>%
 Conclusions: There seems to be a relationship between the duration of the last contact and deposit subscription. Longer contacts tend to have a higher number of deposit subscriptions compared to shorter contacts.
 
 ## Is there a correlation between outcome of the prevoius campaign and the subscription to a term deposit in the current campaign?
-
 ```{r}
 Data %>%
   ggplot(aes(x = poutcome, fill = y)) +
@@ -129,7 +126,6 @@ Data %>%
 Conclusions: This implies that the outcome of the previous campaign might influence the subscription behavior in the current campaign, suggesting a correlation between these variables.
 
 ## Is the marital status of clients (Marital) correlated with the subscription to a term deposit (Y)?
-
 ```{r}
 Data %>%
   ggplot(aes(x = marital, fill = y)) +
@@ -140,7 +136,6 @@ Data %>%
 Conclusions: There is not a trend indicating a strong correlation between marital status and subscription to a term deposit
 
 ## How does the job status relate to the subscription of a term deposit?
-
 ```{r}
 Data %>%
   ggplot(aes(x = job, fill = y)) +
@@ -151,7 +146,6 @@ Data %>%
 Conclusions: The data suggests that job status might have some influence on the subscription to a term deposit, as evidenced by varying subscription counts among different job categories. Yet, this relationship isn't straightforward or consistent across all job types, indicating that other factors might also play a role in determining subscription behavior.
 
 ## How does the education level relate to the subscription of a term deposit?
-
 ```{r}
 Data %>%
   ggplot(aes(x = education, fill = y)) +
@@ -160,9 +154,8 @@ Data %>%
 
 Conclusions: The data suggests a correlation between education level and the subscription to a term deposit. Higher education levels, specifically tertiary education, seem to be associated with a higher likelihood of subscribing to a term deposit.
 
-## Modeling
 
-```{r}
+```{r, eval=FALSE, eval=FALSE}
 
 data <- readRDS("cleaned_data.rds")
 
@@ -170,9 +163,7 @@ set.seed(2000)
 splited_data <- initial_split(data, 0.9)
 train_data <- training(splited_data)
 test_data <- testing(splited_data)
-```
 
-```{r}
 # Random Forest
 model_random_forest <- randomForest(
   formula = y ~ age + education + poutcome + duration,
@@ -189,9 +180,6 @@ pred_df$predictions <- ifelse(pred_df$predictions > 0.5, TRUE, FALSE)
 pred_df$predictions <- factor(pred_df$predictions, levels = levels(pred_df$y))
 conf_matrix_model_random_forest <- confusionMatrix(data = as.factor(pred_df$predictions), reference = as.factor(pred_df$y))
 
-```
-
-```{r}
 # Linear SVM 
 train_data_svm <- train_data %>% select(age, education, poutcome, y) %>% mutate(y = as.integer(y))
 train_dummies <- dummyVars("~.",
@@ -212,9 +200,7 @@ result <- cbind(test_data_svm, predictions)
 conf_matrix_model_svm <- confusionMatrix(data = as.factor(result$predictions),
                                          reference = as.factor(result$y))
 conf_matrix_model_svm
-```
 
-```{r}
 # KNN 
 train_data_knn <- train_data %>% select(age, education, poutcome, y) %>% mutate(y = as.integer(y))
 train_dummies_knn <- dummyVars("~.",
@@ -240,5 +226,18 @@ model_knn <- knn(as.data.frame(oversampled_train[,-13]),
                  use.all = TRUE)
 
 conf_matrix_model_knn <- confusionMatrix(data = model_knn, reference = as.factor(test_data_knn[, 13]))
+```
+
+
+# Modeling
+```{r}
+data_modeling <- data_modeling %>%
+  mutate(
+    across(c(job, marital, education, contact, poutcome, month), as.factor),
+    across(c(default, housing, loan, y), ~ if_else(. == "yes", TRUE, FALSE)),
+    across(c(default, housing, loan, y), as.logical),
+    across(c(age, balance, duration, campaign, pdays, day, previous), as.integer)
+  )
+
 ```
 
