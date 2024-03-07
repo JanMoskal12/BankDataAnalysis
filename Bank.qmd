@@ -14,6 +14,9 @@ library(rpart)
 library(ROSE)
 library(tidymodels)
 library(randomForest)
+library(doParallel)
+library(rio)
+library(themis)
 ```
 
 ```{r message=FALSE}
@@ -34,6 +37,17 @@ summary(Dataframe_numeric)
 ```{r}
 # Sprawdzenie czy występują braki danych 
 colSums(is.na(Dataframe))
+
+
+
+table(Dataframe$contact)
+
+# zamiana "unknown" na NA w komumnie contact
+Dataframe$contact <- replace(Dataframe$contact, Dataframe$contact=="unknown", NA)
+
+sum(is.na(Dataframe$contact))
+
+Dataframe <- na.omit(Dataframe)
 ```
 
 ```{r}
@@ -52,6 +66,8 @@ ggcorrplot(corr, p.mat = p_mat,lab = T)
 
 ```{r message=FALSE}
 
+table(Dataframe$poutcome)
+Dataframe$poutcome <- str_replace_all(Dataframe$poutcome,"unknown","no")
 
 # zamiana zmiennych typu character na numeric
 
@@ -68,16 +84,13 @@ Dataframe$y <- ifelse(Dataframe$y == "yes", 1, 0)
 Dataframe$y <- as.factor(Dataframe$y)
 
 
-
-
-
-
-
 ```
 
 ```{r}
 # zliczenie obserwacji
 plyr::count(Dataframe, "y")
+
+plyr::count(Dataframe, "contact")
 
 ggplot(Dataframe, aes(x=y))+
   geom_bar(fill = "lightgreen")+
@@ -85,118 +98,90 @@ ggplot(Dataframe, aes(x=y))+
 
 ```
 
-```{r}
-library(imbalance)
-
-
-#table(Dataframe$y)
-
-
-#Dataframe$y <- as.factor(ifelse(Dataframe$y == 1, "positve", "negative"))
-
-
-
-#imbalanceRatio(Dataframe, "y")
-
-#newRACOG <- racog(Dataframe, numInstances = 100,classAttr = "y")
-
-#newMWMOTE <- mwmote(Dataframe, numInstances = 100, classAttr = "y")
-```
-
 podział danych
+
 ```{r}
 set.seed(2000)
 
 #podział danych na zbiór testowy i treingowy
 data_split <- initial_split(Dataframe, 0.85)
-train_data <- training(data_split)
-test_data <- testing(data_split)
+train <- training(data_split)
+test <- testing(data_split)
 
-
-# zastosowanie paczki rose do zbalansowania danych
-data_rose <- ROSE(y ~ ., data = train_data, seed = 1)$data
-
-#zliczenie obserwacji bo zbalansowaniu
-table(data_rose$y)
-```
-
-Decision tree
-```{r}
-#model na danych zbalansowanych
-tree_rose <- rpart(y ~ ., data = data_rose)
-
-#model na danych niezbalansowanych
-tree2 <- rpart(y ~ ., data = train_data)
-
-#predykcje modeli
-pred_rose <- predict(tree_rose, newdata = test_data)
-pred_unbalanced <- predict(tree2, newdata = test_data)
-
-#AUC rose
-roc.curve(test_data$y, pred_rose[,2])
-
-#AUC unbalanced
-roc.curve(test_data$y, pred_unbalanced[,2])
 
 ```
 
-Random forest
+
+
+random forest
+
 ```{r}
-model_random_forest <- randomForest(
-  formula = y ~ .,
-  data = data_rose,
-  type = "classification"
-)
+#przepis
+rec <- recipe(y ~ ., data = train) |> 
+  step_smote(y)
 
-#predykcje
-predictions <- predict(model_random_forest, test_data)
+folds <- vfold_cv(train, v = 10)
+keep_pred <- control_resamples(save_pred = TRUE, save_workflow = TRUE)
 
-# ramka danych łącząca predykcje z rzeczywistymi danymi
-pred_df <- bind_cols(predictions, "target" = test_data$y)
+#model
+RF <- rand_forest(mode = "classification",
+                  engine = "ranger",
+                  min_n = tune(),
+                  trees = tune() )
 
-#confusion matrix
-conf_matrix_random_forest <- conf_mat(data = pred_df, truth = "target", estimate = "...1")
-
-conf_matrix_random_forest$table
+rf_params <- extract_parameter_set_dials(RF)
 
 
-roc.curve(test_data$y, predictions)
-```
+rf_grid <- rf_params %>% 
+  grid_latin_hypercube(size = 3)
 
-Regresja logistyczna
-```{r}
-#model regresji logistycznej
-logreg_model <- logistic_reg(mode = "classification",
-                           engine = "glm")
+wf_rf <- workflow() %>% 
+  add_model(RF) %>% 
+  add_recipe(rec)
 
-#definicja przepisu
-reg_rec <- recipe(y ~ ., data = data_rose) %>%
-  step_normalize() #normalizacja danych
 
-#tworzenie przepływu pracy
-reg_wf <- workflow() %>%
-  add_model(logreg_model) %>%
-  add_recipe(reg_rec)
+registerDoParallel(cores=6)
 
-#uczenie modelu
-reg_wf_fit <- reg_wf %>% 
-  fit(data = data_rose)
 
-reg_wf_fit
+wf_train <- wf_rf %>% 
+  tune_grid(resamples = folds,
+            grid = rf_grid,
+            control = keep_pred)
 
-#predykcje
-reg_pred <- predict(reg_wf_fit,test_data) #ramka danych z predykcją
-head(reg_pred)
+#saveRDS(wf_train,"wf_rf_train2.rds")
+
+#wf_train <- readRDS("wf_rf_train2.rds")
+
+wf_train %>% 
+  collect_metrics(summarize = T)
+
+autoplot(wf_train)
+
+best <- wf_train %>% 
+  select_best(metric = "roc_auc")
+
+wf_best <- finalize_workflow(wf_rf, best)
+
+
+wf_best_fit <- wf_best %>% 
+  fit(train)
+
+#saveRDS(wf_best_fit,"wf_rf_best_fit2.rds")
+
+#wf_best_fit <- readRDS("wf_rf_best_fit2.rds")
+
+
+rf_pred <- predict(wf_best_fit, test) #ramka danych z predykcją
 
 #ramka danych łączoa predykcje z rzeczywistymi danymi
-reg_df <- bind_cols(reg_pred, "target" = test_data$y)
-head(reg_df)
+rf_df <- bind_cols(rf_pred, "target" = test$y)
 
 #confusion matrix
-conf_reg <- conf_mat(reg_df, truth = "target", estimate = ".pred_class")
+conf_reg <- conf_mat(rf_df, truth = "target", estimate = ".pred_class")
 
-conf_reg %>% 
+conf_reg %>%
   autoplot(type = "heatmap")
-```
 
+roc.curve(rf_df$target, rf_df$.pred_class)
+```
 
