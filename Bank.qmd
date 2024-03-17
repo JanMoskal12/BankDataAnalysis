@@ -24,6 +24,7 @@ Dataframe_base <- read_csv2("bank-full.csv")
 head(Dataframe_base)
 
 Dataframe <- Dataframe_base
+
 # rozmiar ramki danych
 dim(Dataframe)
 
@@ -38,21 +39,30 @@ summary(Dataframe_numeric)
 # Sprawdzenie czy występują braki danych 
 colSums(is.na(Dataframe))
 
+table(Dataframe$poutcome)
+
+Dataframe$poutcome <- replace(Dataframe$poutcome, Dataframe$poutcome=="unknown", "no")
 
 
 table(Dataframe$contact)
+table(Dataframe$job)
+table(Dataframe$education)
 
-# zamiana "unknown" na NA w komumnie contact
+
+
+# zamiana "unknown" na NA 
 Dataframe$contact <- replace(Dataframe$contact, Dataframe$contact=="unknown", NA)
+Dataframe$education <- replace(Dataframe$education, Dataframe$education=="unknown", NA)
+Dataframe$job <- replace(Dataframe$job, Dataframe$job=="unknown", NA)
 
-sum(is.na(Dataframe$contact))
+colSums(is.na(Dataframe))
 
 Dataframe <- na.omit(Dataframe)
 ```
 
 ```{r}
 # dystrbucja wieku
-Dataframe %>% 
+Dataframe |>  
   ggplot(aes(x = age))+geom_histogram(bins = 78)
   
 ```
@@ -65,10 +75,6 @@ ggcorrplot(corr, p.mat = p_mat,lab = T)
 ```
 
 ```{r message=FALSE}
-
-table(Dataframe$poutcome)
-Dataframe$poutcome <- str_replace_all(Dataframe$poutcome,"unknown","no")
-
 # zamiana zmiennych typu character na numeric
 
 Dataframe$marital <- match(Dataframe$marital, c("single", "married", "divorced"))
@@ -81,8 +87,8 @@ Dataframe$month <- match(Dataframe$month, tolower(month.abb))
 Dataframe$contact <- match(Dataframe$contact, unique(Dataframe$contact))
 Dataframe$poutcome <- match(Dataframe$poutcome, unique(Dataframe$poutcome))
 Dataframe$y <- ifelse(Dataframe$y == "yes", 1, 0)
-Dataframe$y <- as.factor(Dataframe$y)
 
+Dataframe$y <- as.factor(Dataframe$y)
 
 ```
 
@@ -90,11 +96,11 @@ Dataframe$y <- as.factor(Dataframe$y)
 # zliczenie obserwacji
 plyr::count(Dataframe, "y")
 
-plyr::count(Dataframe, "contact")
 
 ggplot(Dataframe, aes(x=y))+
   geom_bar(fill = "lightgreen")+
-  xlab("no / yes")
+  xlab("no / yes")+
+  theme_bw()
 
 ```
 
@@ -109,9 +115,11 @@ train <- training(data_split)
 test <- testing(data_split)
 
 
+
+folds <- vfold_cv(train, v = 10)
+keep_pred <- control_resamples(save_pred = TRUE, save_workflow = TRUE)
+
 ```
-
-
 
 random forest
 
@@ -120,8 +128,6 @@ random forest
 rec <- recipe(y ~ ., data = train) |> 
   step_smote(y)
 
-folds <- vfold_cv(train, v = 10)
-keep_pred <- control_resamples(save_pred = TRUE, save_workflow = TRUE)
 
 #model
 RF <- rand_forest(mode = "classification",
@@ -132,56 +138,79 @@ RF <- rand_forest(mode = "classification",
 rf_params <- extract_parameter_set_dials(RF)
 
 
-rf_grid <- rf_params %>% 
-  grid_latin_hypercube(size = 3)
+rf_grid <- rf_params |> 
+  grid_latin_hypercube(size = 5)
 
-wf_rf <- workflow() %>% 
-  add_model(RF) %>% 
+wf_rf <- workflow() |>  
+  add_model(RF) |> 
   add_recipe(rec)
 
 
-registerDoParallel(cores=6)
+registerDoParallel(cores = 7)
 
 
-wf_train <- wf_rf %>% 
+wf_train <- wf_rf |>  
   tune_grid(resamples = folds,
             grid = rf_grid,
             control = keep_pred)
 
-#saveRDS(wf_train,"wf_rf_train2.rds")
+saveRDS(wf_train,"wf_rf_train.rds")
 
-#wf_train <- readRDS("wf_rf_train2.rds")
+wf_train <- readRDS("wf_rf_train.rds")
 
-wf_train %>% 
+best <- wf_train |>  
+  select_best(metric = "roc_auc")
+
+train_summary <- wf_train |> 
   collect_metrics(summarize = T)
+
+p <- wf_train |> collect_predictions(parameters = best)
+
+# rf_auc <- wf_train %>% 
+#   collect_predictions(parameters = best) %>% 
+#   roc_curve(y, .pred_class)
+
 
 autoplot(wf_train)
 
-best <- wf_train %>% 
-  select_best(metric = "roc_auc")
+
 
 wf_best <- finalize_workflow(wf_rf, best)
 
 
-wf_best_fit <- wf_best %>% 
+wf_best_fit <- wf_best |>  
   fit(train)
 
-#saveRDS(wf_best_fit,"wf_rf_best_fit2.rds")
+saveRDS(wf_best_fit,"wf_rf_best_fit.rds")
 
-#wf_best_fit <- readRDS("wf_rf_best_fit2.rds")
+wf_best_fit <- readRDS("wf_rf_best_fit2.rds")
 
-
-rf_pred <- predict(wf_best_fit, test) #ramka danych z predykcją
+#ramka danych predykcje
+rf_pred <- predict(wf_best_fit, test)
 
 #ramka danych łączoa predykcje z rzeczywistymi danymi
 rf_df <- bind_cols(rf_pred, "target" = test$y)
 
+
 #confusion matrix
 conf_reg <- conf_mat(rf_df, truth = "target", estimate = ".pred_class")
 
-conf_reg %>%
+conf_reg |> 
   autoplot(type = "heatmap")
 
-roc.curve(rf_df$target, rf_df$.pred_class)
-```
 
+
+roc.curve(rf_df$target, rf_df$.pred_class)
+
+# roc_curve(rf_df,truth = "target", ".pred_class")
+# 
+# roc_auc(rf_df,"target", ".pred_class")
+
+#forest_roc <- roc_curve(rf_df, "target", ".pred_class")
+# ggplot()+
+#   geom_path(data = forest_roc, aes(x= 1-specificity, y=sensitivity))+
+#   theme_bw()
+
+accuracy(rf_df, target, .pred_class)
+
+```
