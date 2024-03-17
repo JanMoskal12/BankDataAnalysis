@@ -214,3 +214,80 @@ roc.curve(rf_df$target, rf_df$.pred_class)
 accuracy(rf_df, target, .pred_class)
 
 ```
+
+SVM 
+
+```{r}
+
+SVM <- svm_rbf(
+  mode = "classification",
+  engine = "kernlab",
+  cost = tune(),
+  rbf_sigma = tune(),
+  margin = tune()
+  )
+
+rec2 <- recipe(y ~ ., data = train) |> 
+  step_smote(y)
+
+
+svm_params <- extract_parameter_set_dials(SVM)
+
+
+svm_grid <- svm_params |> 
+  grid_latin_hypercube(size = 6)
+
+wf_svm <- workflow() |>  
+  add_model(SVM) |> 
+  add_recipe(rec2)
+
+wf_train_svm <- wf_svm |>  
+  tune_grid(resamples = folds,
+            grid = svm_grid,
+            control = keep_pred)
+
+saveRDS(wf_train_svm, "wf_svm_train.rds")
+
+
+best_svm <- wf_train_svm |>  
+  select_best(metric = "roc_auc")
+
+
+p_svm <- wf_train |> collect_predictions(parameters = best)
+
+
+svm_train_summary <- wf_train_svm |> 
+  collect_metrics(summarize = T)
+
+
+autoplot(wf_train_svm)
+
+
+
+wf_best_svm <- finalize_workflow(wf_svm, best_svm)
+
+
+wf_best_svm_fit <- wf_best_svm |>  
+  fit(train)
+
+saveRDS(wf_best_svm_fit, "wf_best_svm_fit.rds")
+
+
+#ramka danych predykcje
+svm_pred <- predict(wf_best_svm_fit, test)
+
+#ramka danych łączoa predykcje z rzeczywistymi danymi
+svm_df <- bind_cols(svm_pred, "target" = test$y)
+
+
+#confusion matrix
+conf_matr <- conf_mat(svm_df, truth = "target", estimate = ".pred_class")
+
+conf_matr |> 
+  autoplot(type = "heatmap")
+
+
+accuracy(svm_df, target, .pred_class)
+
+roc.curve(svm_df$target, svm_df$.pred_class)
+```
