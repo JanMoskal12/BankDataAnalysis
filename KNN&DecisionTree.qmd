@@ -1,0 +1,131 @@
+---
+title: "KNN&DecisionTree"
+format: html
+editor: visual
+---
+
+# Libraries
+```{r, include=FALSE}
+library(tidyverse)
+library(tidymodels)
+library(doParallel)
+library(themis)
+library(parsnip)
+library(caret)
+
+set.seed(2000)
+```
+
+# Data transformation
+```{r, echo=FALSE}
+data <- readRDS("cleaned_data.rds")
+data$y <- factor(data$y)
+data$default <- as.integer(data$default)
+data$housing <- as.integer(data$housing)
+data$loan <- as.integer(data$loan)
+data$poutcome <- str_replace_all(data$poutcome, "unknown", "No")
+data$poutcome <- as.factor(data$poutcome)
+data$contact <- replace(data$contact, data$contact == "unknown", NA)
+data <- na.omit(data)
+
+split <- initial_split(data)
+train <- training(split)
+test <- testing(split)
+```
+
+
+# Feature Enginering and Pre-Processing
+```{r}
+# Recipe
+bank_rec <- recipe(y ~ ., data = train) %>% 
+  step_dummy(all_nominal_predictors()) %>%
+  step_smote(y) %>% # %>% step_downsample(y)
+  step_zv(all_predictors()) %>%
+  step_normalize(all_numeric()) 
+
+# V-Fold Cross-Validation
+folds <- vfold_cv(train, v = 10)
+
+# Other configurations
+keep_pred <- control_resamples(save_pred = TRUE, save_workflow = TRUE)
+doParallel::registerDoParallel(cores = 5)
+```
+
+# Models
+```{r}
+# Model (KNN)
+knn <- nearest_neighbor(mode = "classification",
+                        engine = "kknn",
+                        neighbors = tune(),
+                        weight_func = tune(),
+                        dist_power = tune())
+
+
+knn_params <- extract_parameter_set_dials(knn)
+knn_grid <- knn_params %>% 
+  grid_latin_hypercube(size = 3)
+
+wf_knn <- workflow() %>% 
+  add_model(knn) %>% 
+  add_recipe(bank_rec)
+
+wf_knn_train <- wf_knn %>% 
+  tune_grid(resamples = folds,
+            grid = knn_grid,
+            control = keep_pred)
+
+wf_knn_train %>% 
+  collect_metrics(summarize = TRUE)
+best_knn <- wf_knn_train %>% 
+  select_best(metric = "roc_auc")
+wf_knn_best <- finalize_workflow(wf_knn, best_knn)
+wf_knn_best_fit <- wf_knn_best %>% 
+  fit(train)
+
+knn_predictions <- predict(wf_knn_best_fit, test)
+knn_pred_df <- cbind(test, knn_predictions)
+
+conf_matrix_knn <- confusionMatrix(data = as.factor(knn_pred_df$.pred_class), reference = as.factor(knn_pred_df$y))
+conf_matrix_knn
+
+saveRDS(wf_knn_best_fit,"wf_knn_best_fit.rds")
+```
+
+```{r}
+# Model (Decision Tree)
+tree <- decision_tree(mode = "classification",
+                      engine = "rpart",
+                      cost_complexity = tune(),
+                      tree_depth = tune(),
+                      min_n = tune()
+        )
+
+tree_params <- extract_parameter_set_dials(tree)
+tree_grid <- tree_params %>% 
+  grid_latin_hypercube(size = 3)
+
+wf_tree <- workflow() %>% 
+  add_model(tree) %>% 
+  add_recipe(bank_rec)
+
+wf_tree_train <- wf_tree %>% 
+  tune_grid(resamples = folds,
+            grid = tree_grid,
+            control = keep_pred)
+
+wf_tree_train %>% 
+  collect_metrics(summarize = TRUE)
+best_tree <- wf_tree_train %>% 
+  select_best(metric = "roc_auc")
+wf_tree_best <- finalize_workflow(wf_tree, best_tree)
+wf_tree_best_fit <- wf_tree_best %>% 
+  fit(train)
+
+tree_predictions <- predict(wf_tree_best_fit, test)
+tree_pred_df <- cbind(test, tree_predictions)
+
+conf_matrix_decison_tree <- confusionMatrix(data = as.factor(tree_pred_df$.pred_class), reference = as.factor(tree_pred_df$y))
+conf_matrix_decison_tree
+
+saveRDS(wf_tree_best_fit,"wf_tree_best_fit.rds")
+```
