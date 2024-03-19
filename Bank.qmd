@@ -19,7 +19,7 @@ library(rio)
 library(themis)
 ```
 
-```{r message=FALSE}
+```{r message=FALSE, echo=FALSE}
 Dataframe_base <- read_csv2("bank-full.csv")
 head(Dataframe_base)
 
@@ -35,7 +35,7 @@ summary(Dataframe_numeric)
 
 ```
 
-```{r}
+```{r echo=FALSE}
 # Sprawdzenie czy występują braki danych 
 colSums(is.na(Dataframe))
 
@@ -60,21 +60,21 @@ colSums(is.na(Dataframe))
 Dataframe <- na.omit(Dataframe)
 ```
 
-```{r}
+```{r echo=FALSE}
 # dystrbucja wieku
 Dataframe |>  
   ggplot(aes(x = age))+geom_histogram(bins = 78)
   
 ```
 
-```{r}
+```{r echo=FALSE}
 # macierz korelacji
 corr <- cor_mat(Dataframe_numeric)
 p_mat <- cor_pmat(Dataframe_numeric)
 ggcorrplot(corr, p.mat = p_mat,lab = T)
 ```
 
-```{r message=FALSE}
+```{r message=FALSE, echo=FALSE}
 # zamiana zmiennych typu character na numeric
 
 Dataframe$marital <- match(Dataframe$marital, c("single", "married", "divorced"))
@@ -92,7 +92,7 @@ Dataframe$y <- as.factor(Dataframe$y)
 
 ```
 
-```{r}
+```{r echo=FALSE}
 # zliczenie obserwacji
 plyr::count(Dataframe, "y")
 
@@ -106,7 +106,7 @@ ggplot(Dataframe, aes(x=y))+
 
 podział danych
 
-```{r}
+```{r echo=FALSE}
 set.seed(2000)
 
 #podział danych na zbiór testowy i treingowy
@@ -116,6 +116,7 @@ test <- testing(data_split)
 
 
 
+# walidacja krzyżowa
 folds <- vfold_cv(train, v = 10)
 keep_pred <- control_resamples(save_pred = TRUE, save_workflow = TRUE)
 
@@ -123,7 +124,7 @@ keep_pred <- control_resamples(save_pred = TRUE, save_workflow = TRUE)
 
 random forest
 
-```{r}
+```{r echo=FALSE}
 #przepis
 rec <- recipe(y ~ ., data = train) |> 
   step_smote(y)
@@ -146,8 +147,6 @@ wf_rf <- workflow() |>
   add_recipe(rec)
 
 
-registerDoParallel(cores = 7)
-
 
 wf_train <- wf_rf |>  
   tune_grid(resamples = folds,
@@ -166,13 +165,8 @@ train_summary <- wf_train |>
 
 p <- wf_train |> collect_predictions(parameters = best)
 
-# rf_auc <- wf_train %>% 
-#   collect_predictions(parameters = best) %>% 
-#   roc_curve(y, .pred_class)
 
-
-autoplot(wf_train)
-
+autoplot(wf_train, metric = "roc_auc")
 
 
 wf_best <- finalize_workflow(wf_rf, best)
@@ -183,41 +177,39 @@ wf_best_fit <- wf_best |>
 
 saveRDS(wf_best_fit,"wf_rf_best_fit.rds")
 
-wf_best_fit <- readRDS("wf_rf_best_fit2.rds")
+
+wf_best_fit <- readRDS("wf_rf_best_fit.rds")
 
 #ramka danych predykcje
+
 rf_pred <- predict(wf_best_fit, test)
+rf_pred2 <- predict(wf_best_fit, test, type = "prob")
 
 #ramka danych łączoa predykcje z rzeczywistymi danymi
 rf_df <- bind_cols(rf_pred, "target" = test$y)
-
+rf_df2 <- bind_cols(rf_pred2, "target" = test$y)
 
 #confusion matrix
-conf_reg <- conf_mat(rf_df, truth = "target", estimate = ".pred_class")
+conf_rf <- conf_mat(rf_df, truth = "target", estimate = ".pred_class")
 
-conf_reg |> 
+conf_rf |> 
   autoplot(type = "heatmap")
 
 
+roc_auc(rf_df2,"target", ".pred_0")
 
-roc.curve(rf_df$target, rf_df$.pred_class)
-
-# roc_curve(rf_df,truth = "target", ".pred_class")
-# 
-# roc_auc(rf_df,"target", ".pred_class")
-
-#forest_roc <- roc_curve(rf_df, "target", ".pred_class")
-# ggplot()+
-#   geom_path(data = forest_roc, aes(x= 1-specificity, y=sensitivity))+
-#   theme_bw()
+forest_roc <- roc_curve(rf_df2,"target", ".pred_0")
+forest_roc_plot <- ggplot()+
+  geom_path(data = forest_roc, aes(x= 1-specificity, y=sensitivity))+
+  theme_bw()
+forest_roc_plot
 
 accuracy(rf_df, target, .pred_class)
-
 ```
 
-SVM 
+SVM
 
-```{r}
+```{r echo=FALSE}
 
 SVM <- svm_rbf(
   mode = "classification",
@@ -228,18 +220,25 @@ SVM <- svm_rbf(
   )
 
 rec2 <- recipe(y ~ ., data = train) |> 
-  step_smote(y)
+  step_smote(y) |> 
+  step_normalize(all_numeric())
 
 
 svm_params <- extract_parameter_set_dials(SVM)
 
 
 svm_grid <- svm_params |> 
-  grid_latin_hypercube(size = 6)
+  grid_latin_hypercube(size = 5)
 
 wf_svm <- workflow() |>  
   add_model(SVM) |> 
   add_recipe(rec2)
+
+
+
+cl <- makePSOCKcluster(detectCores(logical=FALSE)-1)
+registerDoParallel(cl)
+
 
 wf_train_svm <- wf_svm |>  
   tune_grid(resamples = folds,
@@ -248,13 +247,14 @@ wf_train_svm <- wf_svm |>
 
 saveRDS(wf_train_svm, "wf_svm_train.rds")
 
+wf_train_svm <- readRDS("wf_svm_train.rds")
+
 
 best_svm <- wf_train_svm |>  
   select_best(metric = "roc_auc")
 
 
-p_svm <- wf_train |> collect_predictions(parameters = best)
-
+p_svm <- wf_train_svm |> collect_predictions(parameters = best_svm)
 
 svm_train_summary <- wf_train_svm |> 
   collect_metrics(summarize = T)
@@ -262,6 +262,7 @@ svm_train_summary <- wf_train_svm |>
 
 autoplot(wf_train_svm)
 
+#wf_train_svm |> show_best()
 
 
 wf_best_svm <- finalize_workflow(wf_svm, best_svm)
@@ -270,24 +271,41 @@ wf_best_svm <- finalize_workflow(wf_svm, best_svm)
 wf_best_svm_fit <- wf_best_svm |>  
   fit(train)
 
+stopCluster(cl)
+
+
+
 saveRDS(wf_best_svm_fit, "wf_best_svm_fit.rds")
+
+
+wf_best_svm_fit <- readRDS("wf_best_svm_fit.rds")
 
 
 #ramka danych predykcje
 svm_pred <- predict(wf_best_svm_fit, test)
+svm_pred2 <- predict(wf_best_svm_fit, test, type = "prob")
+
 
 #ramka danych łączoa predykcje z rzeczywistymi danymi
 svm_df <- bind_cols(svm_pred, "target" = test$y)
-
+svm_df2 <- bind_cols(svm_pred2, "target" = test$y)
 
 #confusion matrix
-conf_matr <- conf_mat(svm_df, truth = "target", estimate = ".pred_class")
+conf_svm <- conf_mat(svm_df, truth = "target", estimate = ".pred_class")
 
-conf_matr |> 
+conf_svm |> 
   autoplot(type = "heatmap")
 
+#roc_auc
+roc_auc(svm_df2,"target", ".pred_0")
 
+#roc_curve
+svm_roc <- roc_curve(svm_df2,"target", ".pred_0")
+svm_roc_plot <- ggplot()+
+  geom_path(data = svm_roc, aes(x= 1-specificity, y=sensitivity))+
+  theme_bw()
+svm_roc_plot
+
+#accuracy
 accuracy(svm_df, target, .pred_class)
-
-roc.curve(svm_df$target, svm_df$.pred_class)
 ```
