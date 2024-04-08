@@ -31,12 +31,20 @@ library(themis)
 ```
 
 ```{r}
-dane1 <- read.xlsx("bankP.xlsx")
+#dane1 <- read.xlsx("bankP.xlsx")
+dane1 <- read_csv2("bank-full.csv")
 dim(dane1)
 ```
 
 ```{r}
 str(dane1)
+```
+
+```{r}
+dane1$contact <- replace(dane1$contact, dane1$contact=="unknown", NA)
+sum(is.na(dane1$contact))
+
+dane1 <- na.omit(dane1)
 ```
 
 ```{r}
@@ -53,12 +61,7 @@ dane1$y <- ifelse(dane1$y == "yes", 1, 0)
 dane1$y <- as.factor(dane1$y)
 ```
 
-```{r}
-dane1$contact <- replace(dane1$contact, dane1$contact=="unknown", NA)
-sum(is.na(dane1$contact))
 
-dane1 <- na.omit(dane1)
-```
 
 ```{r}
 colSums(is.na(dane1))
@@ -225,4 +228,3 @@ saveRDS(wf_best_fit,"wfbest_boosting_train.rds")
 
 predict(wf_best_fit, test_dane1)
 ```
-
