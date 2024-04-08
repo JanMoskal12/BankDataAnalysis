@@ -5,6 +5,7 @@ editor: visual
 ---
 
 # Libraries
+
 ```{r, include=FALSE}
 library(tidyverse)
 library(tidymodels)
@@ -17,6 +18,7 @@ set.seed(2000)
 ```
 
 # Data transformation
+
 ```{r, echo=FALSE}
 data <- readRDS("cleaned_data.rds")
 data$y <- factor(data$y)
@@ -33,8 +35,8 @@ train <- training(split)
 test <- testing(split)
 ```
 
-
 # Feature Enginering and Pre-Processing
+
 ```{r}
 # Recipe
 bank_rec <- recipe(y ~ ., data = train) %>% 
@@ -52,6 +54,7 @@ doParallel::registerDoParallel(cores = 5)
 ```
 
 # Models
+
 ```{r}
 # Model (KNN)
 knn <- nearest_neighbor(mode = "classification",

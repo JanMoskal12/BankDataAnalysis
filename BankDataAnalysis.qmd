@@ -22,6 +22,7 @@ data_modeling <- data
 ```
 
 # Visualization
+
 ```{r, include=FALSE, echo=FALSE}
 #| label: Viewing data
 
@@ -68,6 +69,7 @@ Data <- readRDS("cleaned_data.rds")
 ```
 
 ## Distribution of customers' ages: What is the distribution of customers' ages? Are there any dominant age groups?
+
 ```{r}
 Data %>%
   ggplot(aes(x = age, fill = age)) +
@@ -80,6 +82,7 @@ Data %>%
 Conclusions: The data has lots of "Middle-Aged Adults" and "Older Adults," showing they're focused on. But there aren't as many "Younger Adults" or "Seniors," so they might not have been as important in the campaign.
 
 ## Relationship between age and deposit subscription: Is there a connection between age and subscribing to a deposit? Are certain age groups more inclined towards subscribing?
+
 ```{r}
 Data %>%
   group_by(age) %>%
@@ -92,6 +95,7 @@ Data %>%
 Conclusions: There appears to be a correlation between age and subscribing to a deposit. Younger Adults and Seniors show a higher inclination towards subscribing to deposits compared to Middle-Aged and Older Adults.
 
 ## Annual balance and subscription: Is the average annual balance of clients connected to deposit subscription?
+
 ```{r}
 Data %>%
   group_by(y) %>%
@@ -101,6 +105,7 @@ Data %>%
 ```
 
 ## Contact duration and subscription: Does the duration of the last contact relate to deposit subscription?
+
 ```{r}
 Data %>%
   mutate(
@@ -116,6 +121,7 @@ Data %>%
 Conclusions: There seems to be a relationship between the duration of the last contact and deposit subscription. Longer contacts tend to have a higher number of deposit subscriptions compared to shorter contacts.
 
 ## Is there a correlation between outcome of the prevoius campaign and the subscription to a term deposit in the current campaign?
+
 ```{r}
 Data %>%
   ggplot(aes(x = poutcome, fill = y)) +
@@ -126,6 +132,7 @@ Data %>%
 Conclusions: This implies that the outcome of the previous campaign might influence the subscription behavior in the current campaign, suggesting a correlation between these variables.
 
 ## Is the marital status of clients (Marital) correlated with the subscription to a term deposit (Y)?
+
 ```{r}
 Data %>%
   ggplot(aes(x = marital, fill = y)) +
@@ -136,6 +143,7 @@ Data %>%
 Conclusions: There is not a trend indicating a strong correlation between marital status and subscription to a term deposit
 
 ## How does the job status relate to the subscription of a term deposit?
+
 ```{r}
 Data %>%
   ggplot(aes(x = job, fill = y)) +
@@ -146,6 +154,7 @@ Data %>%
 Conclusions: The data suggests that job status might have some influence on the subscription to a term deposit, as evidenced by varying subscription counts among different job categories. Yet, this relationship isn't straightforward or consistent across all job types, indicating that other factors might also play a role in determining subscription behavior.
 
 ## How does the education level relate to the subscription of a term deposit?
+
 ```{r}
 Data %>%
   ggplot(aes(x = education, fill = y)) +
@@ -153,7 +162,6 @@ Data %>%
 ```
 
 Conclusions: The data suggests a correlation between education level and the subscription to a term deposit. Higher education levels, specifically tertiary education, seem to be associated with a higher likelihood of subscribing to a term deposit.
-
 
 ```{r, eval=FALSE, eval=FALSE}
 
@@ -228,8 +236,8 @@ model_knn <- knn(as.data.frame(oversampled_train[,-13]),
 conf_matrix_model_knn <- confusionMatrix(data = model_knn, reference = as.factor(test_data_knn[, 13]))
 ```
 
-
 # Modeling
+
 ```{r}
 data_modeling <- data_modeling %>%
   mutate(
@@ -240,4 +248,3 @@ data_modeling <- data_modeling %>%
   )
 
 ```
-

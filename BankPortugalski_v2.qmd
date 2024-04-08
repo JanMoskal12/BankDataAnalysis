@@ -1,0 +1,228 @@
+---
+title: "Bank Portugalski"
+format: html
+editor: visual
+---
+
+```{r warning=FALSE, echo=FALSE, message=FALSE}
+library(dplyr)
+library(openxlsx)
+library(ggplot2)
+library(ggcorrplot)
+library(rio)
+library(tidymodels)
+library(tidyverse)
+library(doParallel)
+library(imbalance)
+library(parsnip)
+library(lubridate)
+library(gbm)
+library(MASS)
+```
+
+```{r warning=FALSE, echo=FALSE, message=FALSE}
+library(caret)
+library(Metrics)
+library(recipes)
+library(hardhat)
+library(workflows)
+library(themis)
+#library(glm)
+```
+
+```{r}
+dane1 <- read.xlsx("bankP.xlsx")
+dim(dane1)
+```
+
+```{r}
+str(dane1)
+```
+
+```{r}
+dane1$marital <- match(dane1$marital, c("single", "married", "divorced"))
+dane1$housing <- ifelse(dane1$housing == "yes", 1, 0)
+dane1$loan <- ifelse(dane1$loan == "yes", 1, 0)
+dane1$default <- ifelse(dane1$default == "yes", 1, 0)
+dane1$job <- match(dane1$job, unique(dane1$job))
+dane1$education <- match(dane1$education, unique(dane1$education))
+dane1$month <- match(dane1$month, tolower(month.abb))
+dane1$contact <- match(dane1$contact, unique(dane1$contact))
+dane1$poutcome <- match(dane1$poutcome, unique(dane1$poutcome))
+dane1$y <- ifelse(dane1$y == "yes", 1, 0)
+dane1$y <- as.factor(dane1$y)
+```
+
+```{r}
+dane1$contact <- replace(dane1$contact, dane1$contact=="unknown", NA)
+sum(is.na(dane1$contact))
+
+dane1 <- na.omit(dane1)
+```
+
+```{r}
+colSums(is.na(dane1))
+```
+
+```{r}
+table(dane1$poutcome)
+dane1$poutcome <- str_replace_all(dane1$poutcome,"unknown","no")
+```
+
+# Regresja logistyczna
+
+```{r}
+set.seed(2000)
+#podział danych na zbiór testowy i treingowy
+split_dane1 <- initial_split(dane1, 0.85)
+train_dane1 <- training(split_dane1)
+test_dane1 <- testing(split_dane1)
+```
+
+```{r}
+# walidacja krzyżowa
+folds <- vfold_cv(train_dane1, v = 10)
+keep_pred <- control_resamples(save_pred = TRUE, save_workflow = TRUE)
+```
+
+```{r}
+rec1 <- recipe(y ~ ., data = train_dane1) %>% 
+  step_string2factor(all_nominal_predictors()) %>% 
+  step_dummy(all_nominal_predictors()) %>%
+  step_smote(y) %>% 
+  step_zv(all_predictors())
+
+rec2 <- recipe(y ~ ., data = train_dane1) %>% 
+  step_string2factor(all_nominal_predictors()) %>% 
+  step_dummy(all_nominal_predictors()) %>% 
+  step_normalize(all_numeric_predictors()) %>% #normalizacja - przydatne do logistycznej
+  step_smote(y) %>% 
+  step_zv(all_predictors())
+```
+
+```{r}
+log_reg <- logistic_reg(mode = "classification",
+                        engine = "glmnet", #na glm nie działa wyciaganie parametrow
+                        penalty = tune(),
+                        mixture = tune()) 
+
+log_params <- extract_parameter_set_dials(log_reg)
+
+log_grid <- log_params %>% 
+  grid_latin_hypercube(size = 10)
+```
+
+```{r}
+wf_log <- workflow() %>% 
+  add_model(log_reg) %>% 
+  add_recipe(rec2)
+```
+
+```{r}
+cl <- makePSOCKcluster(4)
+registerDoParallel(cl)
+
+wf_train <- wf_log %>% 
+  tune_grid(resamples = folds,
+            grid = log_grid,
+            control = keep_pred)
+
+stopCluster(cl)
+```
+
+```{r}
+wf_train %>% 
+  collect_metrics(summarize = TRUE)
+
+saveRDS(wf_train,"wf_regresja_train.rds")
+
+#autoplot(wf_train)
+```
+
+```{r}
+best <- wf_train %>% 
+  select_best(metric = "roc_auc")
+
+wf_best <- finalize_workflow(wf_log, best)
+
+wf_best_fit <- wf_best %>% 
+  fit(train_dane1)
+
+saveRDS(wf_best_fit,"wfbest_regresja_train.rds")
+
+predict(wf_best_fit, test_dane1)
+```
+
+# Boosting
+
+```{r}
+# walidacja krzyżowa
+folds <- vfold_cv(train_dane1, v = 10)
+keep_pred <- control_resamples(save_pred = TRUE, save_workflow = TRUE)
+```
+
+```{r}
+# Tworzenie modelu boostingowego
+boost <- boost_tree(mode = "classification",
+                    engine = "xgboost",
+                    learn_rate = tune(),
+                    loss_reduction = tune(),
+                    sample_size = tune(),
+                    stop_iter = tune(),
+                    trees = tune(),
+                    tree_depth = tune(),
+                    min_n = tune())
+```
+
+```{r}
+# Określenie siatki parametrów do strojenia
+boost_params <- extract_parameter_set_dials(boost)
+```
+
+```{r}
+boost_grid <- boost_params %>% 
+  grid_latin_hypercube(size = 5)
+```
+
+```{r}
+wf_boost <- workflow() %>% 
+  add_model(boost) %>% 
+  add_recipe(rec1)
+```
+
+```{r}
+registerDoParallel(cl)
+
+wf_train <- wf_boost %>% 
+  tune_grid(
+  resamples = folds,
+  grid = boost_grid,
+  control = keep_pred
+)
+
+stopCluster(cl)
+
+saveRDS(wf_train,"wf_boost_train.rds")
+```
+
+```{r}
+wf_train %>% 
+  collect_metrics(summarize = T)
+
+autoplot(wf_train)
+```
+
+```{r}
+best <- wf_train %>% 
+  select_best(metric = "roc_auc")
+
+wf_best <- finalize_workflow(wf_boost, best)
+
+wf_best_fit <- wf_best %>% 
+  fit(train_dane1)
+
+saveRDS(wf_best_fit,"wfbest_boosting_train.rds")
+
+predict(wf_best_fit, test_dane1)
+```
+
