@@ -90,7 +90,7 @@ Dataframe$y <- ifelse(Dataframe$y == "yes", 1, 0)
 
 Dataframe$y <- as.factor(Dataframe$y)
 
-
+saveRDS(Dataframe, "Dane_czyste.rds")
 
 ```
 
