@@ -10,14 +10,8 @@ library(tidyverse)
 library(tidymodels)
 library(lubridate)
 library(scales)
-library(randomForest)
-library(caret)
-library(class)
-library(e1071)
 library(ggcorrplot)
-library(rstatix)
 ```
-
 
 ```{r message=FALSE , echo = FALSE}
 Data <- readRDS("cleaned_data.rds")
@@ -31,15 +25,17 @@ colSums(is.na(Data)) #Sprawdzenie braków danych
 ## Distribution of customers' ages: What is the distribution of customers' ages? Are there any dominant age groups?
 
 ```{r}
-Data %>%
-  ggplot(aes(x = age, fill = age)) +
-  geom_bar() +
-  scale_x_discrete(name = NULL) +
-  scale_y_continuous(name = "Number of clients") +
-  theme(legend.position = "none")
+Data %>% 
+  count(age, sort = TRUE)
+
+Data |>  
+  ggplot(aes(x = age)) +
+  geom_histogram(bins = 78) + 
+  scale_x_continuous(breaks = seq(18,95,by=5))
+ 
 ```
 
-Conclusions: The data has lots of "Middle-Aged Adults" and "Older Adults," showing they're focused on. But there aren't as many "Younger Adults" or "Seniors," so they might not have been as important in the campaign.
+Wnioski:
 
 ## Relationship between age and deposit subscription: Is there a connection between age and subscribing to a deposit? Are certain age groups more inclined towards subscribing?
 
@@ -78,18 +74,18 @@ Data %>%
 
 ```
 
-Conclusions: There seems to be a relationship between the duration of the last contact and deposit subscription. Longer contacts tend to have a higher number of deposit subscriptions compared to shorter contacts.
+Widać, że jest sporo więcej krótszych rozmów, Wydaje się, że istnieje związek pomiędzy czasem trwania ostatniego kontaktu a subskrypcją. Dłuższe kontakty mają zwykle większą liczbę subskrypcji w porównaniu do krótszych kontaktów.
 
 ## Is there a correlation between outcome of the prevoius campaign and the subscription to a term deposit in the current campaign?
 
 ```{r}
 Data %>%
+  filter(poutcome != "unknown") %>% 
   ggplot(aes(x = poutcome, fill = y)) +
   geom_bar(position = "dodge")
-
 ```
+Oznacza to, że wynik poprzedniej kampanii może mieć wpływ na zachowania subskrypcyjne w bieżącej kampanii, co sugeruje związek między tymi zmiennymi.
 
-Conclusions: This implies that the outcome of the previous campaign might influence the subscription behavior in the current campaign, suggesting a correlation between these variables.
 
 ## Is the marital status of clients (Marital) correlated with the subscription to a term deposit (Y)?
 
@@ -100,18 +96,18 @@ Data %>%
 
 ```
 
-Conclusions: There is not a trend indicating a strong correlation between marital status and subscription to a term deposit
+Nie ma tendencji wskazującej na silny związek pomiędzy stanem cywilnym a zapisaniem się na lokatę terminową
 
 ## How does the job status relate to the subscription of a term deposit?
 
 ```{r}
 Data %>%
   ggplot(aes(x = job, fill = y)) +
-  geom_bar(position = "dodge")
-
+  geom_bar(position = "fill") +
+  facet_wrap(~job)
 ```
 
-Conclusions: The data suggests that job status might have some influence on the subscription to a term deposit, as evidenced by varying subscription counts among different job categories. Yet, this relationship isn't straightforward or consistent across all job types, indicating that other factors might also play a role in determining subscription behavior.
+Dane sugerują, że status stanowiska może mieć pewien wpływ na subskrypcję lokaty terminowej, o czym świadczy różna liczba wyników w różnych kategoriach stanowisk. Jednak ta relacja nie jest prosta ani spójna w przypadku wszystkich typów stanowisk, co wskazuje, że inne czynniki mogą również odgrywać rolę w określaniu zachowania subskrypcji.
 
 ## How does the education level relate to the subscription of a term deposit?
 
@@ -121,18 +117,18 @@ Data %>%
   geom_bar(position = "fill")
 ```
 
-Conclusions: The data suggests a correlation between education level and the subscription to a term deposit. Higher education levels, specifically tertiary education, seem to be associated with a higher likelihood of subscribing to a term deposit.
-
+Dane sugerują związek pomiędzy poziomem wykształcenia a abonamentem na lokatę terminową. Wydaje się, że wyższy poziom wykształcenia, zwłaszcza wyższego, wiąże się z większym prawdopodobieństwem zapisania się na lokatę terminową.
 
 ```{r}
-# macierz korelacji
+d <- Dataframe_base %>% 
+      mutate(y = ifelse(y == "yes", 1, 0))
 
-Dataframe_numeric <- Dataframe_base[sapply(Dataframe_base, class) != "character"]
-
+Dataframe_numeric <- d[sapply(d, class) != "character"]
 corr <- cor_mat(Dataframe_numeric)
 p_mat <- cor_pmat(Dataframe_numeric)
 ggcorrplot(corr, p.mat = p_mat,lab = T)
 ```
+Wnioski: Poza czasem trwania rozmowy żadna zmienna numeryczna nie jest istotnie skorelowana z subskrybcją lokaty terminowej (y).  Długość rozmowy może być znacząca, dlatego że może świadczyć o większym zainteresowaniu. Im dłużej prowadzona jest rozmowa tym bliższy jest temat konsumentowi przez co jest bardziej chętny do subskrypcji lokaty.
 
 ```{r}
 plyr::count(Data, "y")
@@ -195,5 +191,3 @@ conf_matrix_model_svm <- confusionMatrix(data = as.factor(result$predictions),
                                          reference = as.factor(result$y))
 conf_matrix_model_svm
 ```
-
-
