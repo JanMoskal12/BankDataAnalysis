@@ -1,5 +1,5 @@
 ---
-title: "BankDataMain"
+title: "Bank Data Analysis"
 format: html
 editor: visual
 execute: 
@@ -20,13 +20,22 @@ library(gt)
 ```{r message=FALSE , echo = FALSE}
 Data <- readRDS("cleaned_data.rds")
 Dataframe_base <- read_csv2("bank-full.csv")
+
+Data$poutcome <- replace(Data$poutcome, Data$poutcome=="unknown", "no")
+Data$contact <- replace(Data$contact, Data$contact=="unknown", NA)
+Data$education <- replace(Data$education, Data$education=="unknown", NA)
+Data$job <- replace(Data$job, Data$job=="unknown", NA)
+
+Data <- na.omit(Data)
 ```
 
 ```{r}
 #colSums(is.na(Data)) #Sprawdzenie braków danych
 ```
 
-## Distribution of customers' ages: What is the distribution of customers' ages? Are there any dominant age groups?
+## Eksploracja danych
+
+### Distribution of customers' ages: What is the distribution of customers' ages? Are there any dominant age groups?
 
 ```{r}
 # Data %>%
@@ -42,8 +51,7 @@ Data |>
 
 Najwięcej klientów banku jest w wieku 32 lat. Występuje nagły spadek klientów w wieku powyżej 60 lat.
 
-
-## Relationship between age and deposit subscription: Is there a connection between age and subscribing to a deposit? Are certain age groups more inclined towards subscribing?
+### Relationship between age and deposit subscription: Is there a connection between age and subscribing to a deposit? Are certain age groups more inclined towards subscribing?
 
 ```{r}
 Data %>%
@@ -59,7 +67,7 @@ Istnieje związek pomiędzy wiekiem, a skłonnością do zakładania lokat. Mło
 
 Conclusions: There appears to be a correlation between age and subscribing to a deposit. Younger Adults and Seniors show a higher inclination towards subscribing to deposits compared to Middle-Aged and Older Adults.
 
-## Annual balance and subscription: Is the average annual balance of clients connected to deposit subscription?
+### Annual balance and subscription: Is the average annual balance of clients connected to deposit subscription?
 
 ```{r}
 Data %>%
@@ -72,7 +80,7 @@ Data %>%
 
 Osoby z większym saldem konta mają większą skłonność do pozostawienia pieniędzy na lokacie.
 
-## Contact duration and subscription: Does the duration of the last contact relate to deposit subscription?
+### Contact duration and subscription: Does the duration of the last contact relate to deposit subscription?
 
 ```{r}
 Data %>%
@@ -89,7 +97,7 @@ Data %>%
 
 Widać, że jest sporo więcej krótszych rozmów, Wydaje się, że istnieje związek pomiędzy czasem trwania ostatniego kontaktu a subskrypcją. Dłuższe kontakty mają zwykle większą liczbę subskrypcji w porównaniu do krótszych kontaktów.
 
-## Is there a correlation between outcome of the prevoius campaign and the subscription to a term deposit in the current campaign?
+### Is there a correlation between outcome of the prevoius campaign and the subscription to a term deposit in the current campaign?
 
 ```{r}
 Data %>%
@@ -101,7 +109,7 @@ Data %>%
 
 Oznacza to, że wynik poprzedniej kampanii może mieć wpływ na zachowania subskrypcyjne w bieżącej kampanii, co sugeruje związek między tymi zmiennymi.
 
-## Is the marital status of clients (Marital) correlated with the subscription to a term deposit (Y)?
+### Is the marital status of clients (Marital) correlated with the subscription to a term deposit (Y)?
 
 ```{r}
 Data %>%
@@ -113,7 +121,7 @@ Data %>%
 
 Nie ma tendencji wskazującej na silny związek pomiędzy stanem cywilnym a zapisaniem się na lokatę terminową
 
-## How does the job status relate to the subscription of a term deposit?
+### How does the job status relate to the subscription of a term deposit?
 
 ```{r}
 Data %>%
@@ -125,7 +133,7 @@ Data %>%
 
 Dane sugerują, że status stanowiska może mieć pewien wpływ na subskrypcję lokaty terminowej, o czym świadczy różna liczba wyników w różnych kategoriach stanowisk. Jednak ta relacja nie jest prosta ani spójna w przypadku wszystkich typów stanowisk, co wskazuje, że inne czynniki mogą również odgrywać rolę w określaniu zachowania subskrypcji.
 
-## How does the education level relate to the subscription of a term deposit?
+### How does the education level relate to the subscription of a term deposit?
 
 ```{r}
 Data %>%
@@ -156,21 +164,38 @@ ggplot(Data, aes(x=y))+
   theme_bw()
 ```
 
-
-
 ## Budowa modeli
-
-
 
 ```{r}
 load("wykresy/model_summary_table.rda")
 
-summary_table |> gt()
+summary_table |> 
+  gt() |> 
+  data_color(columns = 7,
+             rows = c(1,2,3,5),
+             palette = "#4bff4b",
+             apply_to = "text") |> 
+  data_color(columns = 6,
+             rows = c(4,6),
+             palette = "#4bff4b",
+             apply_to = "text") |> 
+  data_color(columns = 6,
+             rows = c(1,2,3,5),
+             palette = "red",
+             apply_to = "text") |> 
+  data_color(columns = 5,
+             rows = c(6),
+             palette = "red",
+             apply_to = "text") |> 
+  data_color(columns = 2,
+             rows = c(4),
+             palette = "red",
+             apply_to = "text")
+  
+  
 ```
-
 
 ```{r}
 load("wykresy/curve.rda")
-curve
+curve 
 ```
-

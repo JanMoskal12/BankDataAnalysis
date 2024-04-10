@@ -139,14 +139,17 @@ curve
 save(curve, file="wykresy/curve.rda")
 
 
-# rf_wf <- readRDS("workflows/wf_rf_train.rds") 
-# rf_wf
-# 
+rf_wf <- readRDS("workflows/wf_rf_train.rds")
+svm_wf <- readRDS("workflows/wf_svm_train.rds")
+boost_wf <- readRDS("workflows/wf_boost_train.rds")
+log_wf <- readRDS("workflows/wf_regresja_train.rds")
+# knn_wf <- readRDS("workflows/wf_knn_best_train.rds")
 # tree_wf <- readRDS("workflows/wf_tree_best.rds")
-# 
-# six_models <- as_workflow_set()
-# 
-# six_models |> autoplot()
+
+six_models <- as_workflow_set(rf = rf_wf, svm = svm_wf, log_reg = log_wf,)
+
+six_models |> autoplot()
+
 
 
 
