@@ -191,8 +191,25 @@ summary_table |>
              rows = c(4),
              palette = "red",
              apply_to = "text")
-  
-  
+```
+
+```{r}
+data <- readRDS("Dane_czyste.rds")
+
+set.seed(2000)
+
+
+data_split <- initial_split(data, 0.85)
+train <- training(data_split)
+test_data <- testing(data_split)
+log_fit <- readRDS("modele/wfbest_regresja_fit.rds")
+
+pred <- predict(log_fit, new_data=test_data)
+pred <- cbind(pred, test_data)
+conf_mat_rf <- conf_mat(pred, truth=y, estimate=.pred_class)
+conf_mat_rf
+
+autoplot(conf_mat_rf, type = "heatmap")
 ```
 
 ```{r}
