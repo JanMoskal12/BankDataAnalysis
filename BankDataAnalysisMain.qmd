@@ -1,6 +1,8 @@
 ---
 title: "Bank Data Analysis"
-format: html
+format: 
+  html:
+    embed-resources: true
 editor: visual
 execute: 
   echo: false
@@ -29,7 +31,7 @@ Dataframe_base <- read_csv2("bank-full.csv")
 
 ## Eksploracja danych
 
-### Distribution of customers' ages: What is the distribution of customers' ages? Are there any dominant age groups?
+
 
 ```{r}
 # Data %>%
@@ -39,13 +41,15 @@ Data |>
   ggplot(aes(x = age)) +
   geom_histogram(bins = 78) + 
   scale_x_continuous(breaks = seq(18,95,by=5)) +
-  theme_bw()
+  theme_bw()+
+  labs(title = "Rozkład wieku klientów")+
+  theme(plot.title = element_text(hjust = 0.5))
  
 ```
 
 Najwięcej klientów banku jest w wieku 32 lat. Występuje nagły spadek klientów w wieku powyżej 60 lat.
 
-### Relationship between age and deposit subscription: Is there a connection between age and subscribing to a deposit? Are certain age groups more inclined towards subscribing?
+
 
 ```{r}
 Data %>%
@@ -54,27 +58,32 @@ Data %>%
   geom_bar(position = "fill") +
   labs(x = NULL, y = "Proportion of term deposit subscriptions", fill = "Has the client subscribed a term deposit?") +
   theme_bw()+
-  theme(legend.position = "bottom")
+  labs(title = "Wykres zależności między wiekiem a lokatą")+
+  theme(legend.position = "bottom",plot.title = element_text(hjust = 0.5))
+  
 ```
 
 Istnieje związek pomiędzy wiekiem, a skłonnością do zakładania lokat. Młodzi oraz seniorzy są bardziej skłonni do zakładania lokat w porównaniu do osób w średnim wieku.
 
-Conclusions: There appears to be a correlation between age and subscribing to a deposit. Younger Adults and Seniors show a higher inclination towards subscribing to deposits compared to Middle-Aged and Older Adults.
 
-### Annual balance and subscription: Is the average annual balance of clients connected to deposit subscription?
+
 
 ```{r}
 Data %>%
   group_by(y) %>%
-  summarise(avg_balance = mean(balance)) %>%
+  summarise(avg_balance = mean(balance)) |> 
   ggplot(aes(x = y, y = avg_balance, fill = y)) +
   geom_bar(stat = "identity")+
-  theme_bw()
+  theme_bw()+
+  labs(title = "Średnie saldo konta klientów w zależności czy posiadają lokatę",
+       x= "", y = "średni balans")+
+  theme(plot.title = element_text(hjust = 0.5))
+
 ```
 
 Osoby z większym saldem konta mają większą skłonność do pozostawienia pieniędzy na lokacie.
 
-### Contact duration and subscription: Does the duration of the last contact relate to deposit subscription?
+
 
 ```{r}
 Data %>%
@@ -85,59 +94,73 @@ Data %>%
   group_by(duration_group) %>%
   ggplot(aes(x = duration_group, fill = y)) +
   geom_bar(position = "dodge")+
-  theme_bw()
+  theme_bw()+
+  labs(title = "Liczność subskrypcji w zależności od długości ostatniego kontaktu",
+       y="Liczba subskrypcji",x="Długość rozmowy")+
+  theme(plot.title = element_text(hjust=0.5))
 
 ```
 
-Widać, że jest sporo więcej krótszych rozmów, Wydaje się, że istnieje związek pomiędzy czasem trwania ostatniego kontaktu a subskrypcją. Dłuższe kontakty mają zwykle większą liczbę subskrypcji w porównaniu do krótszych kontaktów.
+Widać, że jest sporo więcej krótszych rozmów. Wydaje się, że istnieje związek pomiędzy czasem trwania ostatniego kontaktu a subskrypcją. Dłuższe kontakty mają zwykle większą liczbę subskrypcji w porównaniu do krótszych kontaktów.
 
-### Is there a correlation between outcome of the prevoius campaign and the subscription to a term deposit in the current campaign?
+
 
 ```{r}
 Data %>%
   filter(poutcome != "unknown") %>% 
   ggplot(aes(x = poutcome, fill = y)) +
   geom_bar(position = "dodge")+
-  theme_bw()
+  theme_bw()+
+  labs(title = "Zależność między wynikiem poprzedniej kampanii a chęcią założenia lokaty",
+       y = "Liczba subskrypcji",
+       x = "Wynik poprzedniej kampanii")+
+  theme(plot.title = element_text(hjust=0.5))
 ```
 
 Oznacza to, że wynik poprzedniej kampanii może mieć wpływ na zachowania subskrypcyjne w bieżącej kampanii, co sugeruje związek między tymi zmiennymi.
 
-### Is the marital status of clients (Marital) correlated with the subscription to a term deposit (Y)?
+
 
 ```{r}
 Data %>%
   ggplot(aes(x = marital, fill = y)) +
   geom_bar(position = "fill")+
-  theme_bw()
+  theme_bw()+
+  labs(title = "Chęć założenia lokaty w zależności od stanu cywilnego")+
+  theme(plot.title = element_text(hjust=0.5))
 ```
+Nie ma widocznego związku między stanem cywilnym a założeniem lokaty długoterminowej.
 
-Nie ma tendencji wskazującej na silny związek pomiędzy stanem cywilnym a zapisaniem się na lokatę terminową
 
-### How does the job status relate to the subscription of a term deposit?
+
+
+
 
 ```{r}
 Data %>%
   filter(job != "unknown") %>% 
   ggplot(aes(x = job, fill = y)) + 
   geom_bar(position = "fill") +
-  #facet_wrap(~job)+
   theme_bw() +
-  coord_flip()
+  coord_flip()+
+  labs(title = "Proporcja założonych lokat w zależności od rodzaju wykonywanej pracy")+
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 Dane sugerują, że status stanowiska może mieć pewien wpływ na subskrypcję lokaty terminowej, o czym świadczy różna liczba wyników w różnych kategoriach stanowisk. Jednak ta relacja nie jest prosta ani spójna w przypadku wszystkich typów stanowisk, co wskazuje, że inne czynniki mogą również odgrywać rolę w określaniu zachowania subskrypcji.
 
-### How does the education level relate to the subscription of a term deposit?
+
 
 ```{r}
-d <- Data %>%
+Data %>%
   filter(education != "unknown") %>% 
   ggplot(aes(x = education, fill = y)) +
   geom_bar(position = "fill")+
-  theme_bw()
+  theme_bw()+
+  labs(title = "Chęć załozenia lokaty w zależności od poziomu wykształcenia")+
+  theme(plot.title = element_text(hjust = 0.5))
 
-ggplotly(d)
+#ggplotly(d)
 
 # Dodac geom_label z liczba osob w danej grupie
 ```
@@ -161,8 +184,13 @@ Poza czasem trwania rozmowy żadna zmienna numeryczna nie jest istotnie skorelow
 
 ggplot(Data, aes(x=y))+
   geom_bar(fill = "lightgreen")+
-  theme_bw()
+  theme_bw()+
+  labs(title = "Zbalansowanie danych",
+       y = "Liczba obserwacji")+
+  theme(plot.title = element_text(hjust = 0.5))
 ```
+Mamy doczynienie z niezbalansowaniem danych, co będzie istotne w procesie tworzenia modeli
+
 
 ## Budowa modeli
 
@@ -193,6 +221,14 @@ summary_table |>
              apply_to = "text")
 ```
 
+
+
+```{r}
+load("wykresy/curve.rda")
+curve 
+```
+
+
 ```{r}
 data <- readRDS("Dane_czyste.rds")
 
@@ -202,17 +238,12 @@ set.seed(2000)
 data_split <- initial_split(data, 0.85)
 train <- training(data_split)
 test_data <- testing(data_split)
-log_fit <- readRDS("modele/wfbest_regresja_fit.rds")
+boost_fit <- readRDS("modele/wfbest_boosting_fit.rds")
 
-pred <- predict(log_fit, new_data=test_data)
+pred <- predict(boost_fit, new_data=test_data)
 pred <- cbind(pred, test_data)
-conf_mat_rf <- conf_mat(pred, truth=y, estimate=.pred_class)
-conf_mat_rf
+conf_mat_boost <- conf_mat(pred, truth=y, estimate=.pred_class)
 
-autoplot(conf_mat_rf, type = "heatmap")
-```
 
-```{r}
-load("wykresy/curve.rda")
-curve 
+autoplot(conf_mat_boost, type = "heatmap")
 ```
