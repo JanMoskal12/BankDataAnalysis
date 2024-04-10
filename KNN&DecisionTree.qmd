@@ -14,21 +14,23 @@ library(themis)
 library(parsnip)
 library(caret)
 
-set.seed(2000)
+
 ```
 
 # Data transformation
 
 ```{r, echo=FALSE}
-data <- readRDS("cleaned_data.rds")
-data$y <- factor(data$y)
-data$default <- as.integer(data$default)
-data$housing <- as.integer(data$housing)
-data$loan <- as.integer(data$loan)
-data$poutcome <- str_replace_all(data$poutcome, "unknown", "No")
-data$poutcome <- as.factor(data$poutcome)
-data$contact <- replace(data$contact, data$contact == "unknown", NA)
-data <- na.omit(data)
+set.seed(2000)
+
+data <- readRDS("Dane_czyste.rds")
+# data$y <- factor(data$y)
+# data$default <- as.integer(data$default)
+# data$housing <- as.integer(data$housing)
+# data$loan <- as.integer(data$loan)
+# data$poutcome <- str_replace_all(data$poutcome, "unknown", "No")
+# data$poutcome <- as.factor(data$poutcome)
+# data$contact <- replace(data$contact, data$contact == "unknown", NA)
+# data <- na.omit(data)
 
 split <- initial_split(data)
 train <- training(split)
@@ -50,7 +52,8 @@ folds <- vfold_cv(train, v = 10)
 
 # Other configurations
 keep_pred <- control_resamples(save_pred = TRUE, save_workflow = TRUE)
-doParallel::registerDoParallel(cores = 5)
+
+# doParallel::registerDoParallel(cores = 5)
 ```
 
 # Models
@@ -65,12 +68,16 @@ knn <- nearest_neighbor(mode = "classification",
 
 
 knn_params <- extract_parameter_set_dials(knn)
+
 knn_grid <- knn_params %>% 
-  grid_latin_hypercube(size = 3)
+  grid_latin_hypercube(size = 5)
 
 wf_knn <- workflow() %>% 
   add_model(knn) %>% 
   add_recipe(bank_rec)
+
+cl <- makePSOCKcluster(detectCores(logical=FALSE)-1)
+registerDoParallel(cl)
 
 wf_knn_train <- wf_knn %>% 
   tune_grid(resamples = folds,
@@ -79,11 +86,16 @@ wf_knn_train <- wf_knn %>%
 
 wf_knn_train %>% 
   collect_metrics(summarize = TRUE)
+
 best_knn <- wf_knn_train %>% 
   select_best(metric = "roc_auc")
+
 wf_knn_best <- finalize_workflow(wf_knn, best_knn)
+
 wf_knn_best_fit <- wf_knn_best %>% 
   fit(train)
+
+stopCluster(cl)
 
 knn_predictions <- predict(wf_knn_best_fit, test)
 knn_pred_df <- cbind(test, knn_predictions)
@@ -92,6 +104,7 @@ conf_matrix_knn <- confusionMatrix(data = as.factor(knn_pred_df$.pred_class), re
 conf_matrix_knn
 
 saveRDS(wf_knn_best_fit,"wf_knn_best_fit.rds")
+saveRDS(wf_knn_best, "wf_knn_best_train.rds")
 ```
 
 ```{r}
@@ -105,7 +118,7 @@ tree <- decision_tree(mode = "classification",
 
 tree_params <- extract_parameter_set_dials(tree)
 tree_grid <- tree_params %>% 
-  grid_latin_hypercube(size = 3)
+  grid_latin_hypercube(size = 5)
 
 wf_tree <- workflow() %>% 
   add_model(tree) %>% 
