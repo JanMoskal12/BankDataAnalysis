@@ -13,8 +13,6 @@ library(doParallel)
 library(themis)
 library(parsnip)
 library(caret)
-
-
 ```
 
 # Data transformation
@@ -144,4 +142,5 @@ conf_matrix_decison_tree <- confusionMatrix(data = as.factor(tree_pred_df$.pred_
 conf_matrix_decison_tree
 
 saveRDS(wf_tree_best_fit,"wf_tree_best_fit.rds")
+saveRDS(wf_tree_best, "wf_tree_best.rds")
 ```

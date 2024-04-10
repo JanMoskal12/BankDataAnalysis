@@ -20,13 +20,6 @@ library(gt)
 ```{r message=FALSE , echo = FALSE}
 Data <- readRDS("cleaned_data.rds")
 Dataframe_base <- read_csv2("bank-full.csv")
-
-Data$poutcome <- replace(Data$poutcome, Data$poutcome=="unknown", "no")
-Data$contact <- replace(Data$contact, Data$contact=="unknown", NA)
-Data$education <- replace(Data$education, Data$education=="unknown", NA)
-Data$job <- replace(Data$job, Data$job=="unknown", NA)
-
-Data <- na.omit(Data)
 ```
 
 ```{r}
@@ -41,7 +34,7 @@ Data <- na.omit(Data)
 # Data %>%
 #   count(age, sort = TRUE)
 
-Data |>  
+Data |>
   ggplot(aes(x = age)) +
   geom_histogram(bins = 78) + 
   scale_x_continuous(breaks = seq(18,95,by=5)) +
@@ -116,7 +109,6 @@ Data %>%
   ggplot(aes(x = marital, fill = y)) +
   geom_bar(position = "fill")+
   theme_bw()
-
 ```
 
 Nie ma tendencji wskazującej na silny związek pomiędzy stanem cywilnym a zapisaniem się na lokatę terminową
@@ -137,6 +129,7 @@ Dane sugerują, że status stanowiska może mieć pewien wpływ na subskrypcję 
 
 ```{r}
 Data %>%
+  filter(education != "unknown") %>% 
   ggplot(aes(x = education, fill = y)) +
   geom_bar(position = "fill")+
   theme_bw()
