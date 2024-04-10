@@ -2,6 +2,8 @@
 title: "BankDataMain"
 format: html
 editor: visual
+execute: 
+  echo: false
 ---
 
 ```{r echo=FALSE, message=FALSE, warning= FALSE}
@@ -11,6 +13,8 @@ library(tidymodels)
 library(lubridate)
 library(scales)
 library(ggcorrplot)
+library(rstatix)
+library(gt)
 ```
 
 ```{r message=FALSE , echo = FALSE}
@@ -19,23 +23,25 @@ Dataframe_base <- read_csv2("bank-full.csv")
 ```
 
 ```{r}
-colSums(is.na(Data)) #Sprawdzenie braków danych
+#colSums(is.na(Data)) #Sprawdzenie braków danych
 ```
 
 ## Distribution of customers' ages: What is the distribution of customers' ages? Are there any dominant age groups?
 
 ```{r}
-Data %>% 
-  count(age, sort = TRUE)
+# Data %>%
+#   count(age, sort = TRUE)
 
 Data |>  
   ggplot(aes(x = age)) +
   geom_histogram(bins = 78) + 
-  scale_x_continuous(breaks = seq(18,95,by=5))
+  scale_x_continuous(breaks = seq(18,95,by=5)) +
+  theme_bw()
  
 ```
 
-Wnioski:
+Najwięcej klientów banku jest w wieku 32 lat. Występuje nagły spadek klientów w wieku powyżej 60 lat.
+
 
 ## Relationship between age and deposit subscription: Is there a connection between age and subscribing to a deposit? Are certain age groups more inclined towards subscribing?
 
@@ -45,8 +51,11 @@ Data %>%
   ggplot(aes(x = age, fill = y)) +
   geom_bar(position = "fill") +
   labs(x = NULL, y = "Proportion of term deposit subscriptions", fill = "Has the client subscribed a term deposit?") +
+  theme_bw()+
   theme(legend.position = "bottom")
 ```
+
+Istnieje związek pomiędzy wiekiem, a skłonnością do zakładania lokat. Młodzi oraz seniorzy są bardziej skłonni do zakładania lokat w porównaniu do osób w średnim wieku.
 
 Conclusions: There appears to be a correlation between age and subscribing to a deposit. Younger Adults and Seniors show a higher inclination towards subscribing to deposits compared to Middle-Aged and Older Adults.
 
@@ -57,8 +66,11 @@ Data %>%
   group_by(y) %>%
   summarise(avg_balance = mean(balance)) %>%
   ggplot(aes(x = y, y = avg_balance, fill = y)) +
-  geom_bar(stat = "identity")
+  geom_bar(stat = "identity")+
+  theme_bw()
 ```
+
+Osoby z większym saldem konta mają większą skłonność do pozostawienia pieniędzy na lokacie.
 
 ## Contact duration and subscription: Does the duration of the last contact relate to deposit subscription?
 
@@ -70,7 +82,8 @@ Data %>%
   ) %>%
   group_by(duration_group) %>%
   ggplot(aes(x = duration_group, fill = y)) +
-  geom_bar(position = "dodge")
+  geom_bar(position = "dodge")+
+  theme_bw()
 
 ```
 
@@ -82,7 +95,8 @@ Widać, że jest sporo więcej krótszych rozmów, Wydaje się, że istnieje zwi
 Data %>%
   filter(poutcome != "unknown") %>% 
   ggplot(aes(x = poutcome, fill = y)) +
-  geom_bar(position = "dodge")
+  geom_bar(position = "dodge")+
+  theme_bw()
 ```
 
 Oznacza to, że wynik poprzedniej kampanii może mieć wpływ na zachowania subskrypcyjne w bieżącej kampanii, co sugeruje związek między tymi zmiennymi.
@@ -92,7 +106,8 @@ Oznacza to, że wynik poprzedniej kampanii może mieć wpływ na zachowania subs
 ```{r}
 Data %>%
   ggplot(aes(x = marital, fill = y)) +
-  geom_bar(position = "fill")
+  geom_bar(position = "fill")+
+  theme_bw()
 
 ```
 
@@ -104,7 +119,8 @@ Nie ma tendencji wskazującej na silny związek pomiędzy stanem cywilnym a zapi
 Data %>%
   ggplot(aes(x = job, fill = y)) +
   geom_bar(position = "fill") +
-  facet_wrap(~job)
+  facet_wrap(~job)+
+  theme_bw()
 ```
 
 Dane sugerują, że status stanowiska może mieć pewien wpływ na subskrypcję lokaty terminowej, o czym świadczy różna liczba wyników w różnych kategoriach stanowisk. Jednak ta relacja nie jest prosta ani spójna w przypadku wszystkich typów stanowisk, co wskazuje, że inne czynniki mogą również odgrywać rolę w określaniu zachowania subskrypcji.
@@ -114,7 +130,8 @@ Dane sugerują, że status stanowiska może mieć pewien wpływ na subskrypcję 
 ```{r}
 Data %>%
   ggplot(aes(x = education, fill = y)) +
-  geom_bar(position = "fill")
+  geom_bar(position = "fill")+
+  theme_bw()
 ```
 
 Dane sugerują związek pomiędzy poziomem wykształcenia a abonamentem na lokatę terminową. Wydaje się, że wyższy poziom wykształcenia, zwłaszcza wyższego, wiąże się z większym prawdopodobieństwem zapisania się na lokatę terminową.
@@ -129,72 +146,31 @@ p_mat <- cor_pmat(Dataframe_numeric)
 ggcorrplot(corr, p.mat = p_mat,lab = T)
 ```
 
-Wnioski: Poza czasem trwania rozmowy żadna zmienna numeryczna nie jest istotnie skorelowana z subskrybcją lokaty terminowej (y). Długość rozmowy może być znacząca, dlatego że może świadczyć o większym zainteresowaniu. Im dłużej prowadzona jest rozmowa tym bliższy jest temat konsumentowi przez co jest bardziej chętny do subskrypcji lokaty.
+Poza czasem trwania rozmowy żadna zmienna numeryczna nie jest istotnie skorelowana z subskrybcją lokaty terminowej (y). Długość rozmowy może być znacząca, dlatego że może świadczyć o większym zainteresowaniu. Im dłużej prowadzona jest rozmowa tym bliższy jest temat konsumentowi przez co jest bardziej chętny do subskrypcji lokaty.
 
 ```{r}
-plyr::count(Data, "y")
+#plyr::count(Data, "y")
 
 ggplot(Data, aes(x=y))+
-  geom_bar(fill = "lightgreen")
+  geom_bar(fill = "lightgreen")+
+  theme_bw()
 ```
 
-## Modeling
+
+
+## Budowa modeli
+
+
 
 ```{r}
+load("wykresy/model_summary_table.rda")
 
-data <- readRDS("cleaned_data.rds")
-
-set.seed(2000)
-splited_data <- initial_split(data, 0.9)
-train_data <- training(splited_data)
-test_data <- testing(splited_data)
-```
-
-```{r}
-# Random Forest
-model_random_forest <- randomForest(
-  formula = y ~ age + education + poutcome + duration,
-  data = train_data,
-  type = "classification"
-)
-
-summary(model_random_forest)
-
-predictions <- predict(model_random_forest, test_data)
-pred_df <- cbind(test_data, predictions)
-
-pred_df$predictions <- ifelse(pred_df$predictions > 0.5, TRUE, FALSE)
-
-conf_matrix_model_random_forest <- confusionMatrix(data = as.factor(pred_df$predictions), reference = as.factor(pred_df$y))
-
-conf_matrix_model_random_forest
-```
-
-```{r}
-# Linear SVM 
-train_data_svm <- train_data %>% select(age, education, poutcome, y) %>% mutate(y = as.integer(y))
-train_dummies <- dummyVars("~.",
-            data = train_data_svm)
-train_data_svm <- predict(train_dummies, train_data_svm)
-
-
-test_data_svm <- test_data %>% select(age, education, poutcome, y) %>% mutate(y = as.integer(y))
-test_dummies <- dummyVars("~.",
-            data = test_data_svm)
-train_data_svm <- predict(test_dummies, test_data_svm)
-
-model_svm <- svm(y ~ ., data = test_data_svm, kernel = "linear")
-predictions <- predict(model_svm, test_data_svm[, -4])
-predictions <- as.integer(ifelse(predictions > 0.5, 1, 0))
-
-result <- cbind(test_data_svm, predictions)
-conf_matrix_model_svm <- confusionMatrix(data = as.factor(result$predictions),
-                                         reference = as.factor(result$y))
-conf_matrix_model_svm
+summary_table |> gt()
 ```
 
 
 ```{r}
-
+load("wykresy/curve.rda")
+curve
 ```
 

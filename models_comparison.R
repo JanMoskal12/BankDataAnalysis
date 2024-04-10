@@ -138,3 +138,19 @@ curve
 
 save(curve, file="wykresy/curve.rda")
 
+
+# rf_wf <- readRDS("workflows/wf_rf_train.rds") 
+# rf_wf
+# 
+# tree_wf <- readRDS("workflows/wf_tree_best.rds")
+# 
+# six_models <- as_workflow_set()
+# 
+# six_models |> autoplot()
+
+
+
+
+
+
+
