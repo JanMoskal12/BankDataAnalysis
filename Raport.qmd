@@ -4,8 +4,6 @@ format: html
 editor: visual
 ---
 
-
-
 ```{r}
 library(tidymodels)
 ```
@@ -21,8 +19,6 @@ train <- training(data_split)
 test_data <- testing(data_split)
 
 ```
-
-
 
 ```{r}
 rf_fit <- readRDS("wf_rf_best_fit.rds")
@@ -104,7 +100,6 @@ summary_table <- metric_names %>%
 summary_table
 ```
 
-
 ```{r}
 
 rf_pred <- predict(rf_fit, new_data=test_data, type = "prob") %>% 
@@ -151,4 +146,3 @@ curve <- ggplot()+
                        guide = "legend")
 curve
 ```
-
