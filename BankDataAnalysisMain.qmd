@@ -84,8 +84,8 @@ Data %>%
   ggplot(aes(x = poutcome, fill = y)) +
   geom_bar(position = "dodge")
 ```
-Oznacza to, że wynik poprzedniej kampanii może mieć wpływ na zachowania subskrypcyjne w bieżącej kampanii, co sugeruje związek między tymi zmiennymi.
 
+Oznacza to, że wynik poprzedniej kampanii może mieć wpływ na zachowania subskrypcyjne w bieżącej kampanii, co sugeruje związek między tymi zmiennymi.
 
 ## Is the marital status of clients (Marital) correlated with the subscription to a term deposit (Y)?
 
@@ -128,7 +128,8 @@ corr <- cor_mat(Dataframe_numeric)
 p_mat <- cor_pmat(Dataframe_numeric)
 ggcorrplot(corr, p.mat = p_mat,lab = T)
 ```
-Wnioski: Poza czasem trwania rozmowy żadna zmienna numeryczna nie jest istotnie skorelowana z subskrybcją lokaty terminowej (y).  Długość rozmowy może być znacząca, dlatego że może świadczyć o większym zainteresowaniu. Im dłużej prowadzona jest rozmowa tym bliższy jest temat konsumentowi przez co jest bardziej chętny do subskrypcji lokaty.
+
+Wnioski: Poza czasem trwania rozmowy żadna zmienna numeryczna nie jest istotnie skorelowana z subskrybcją lokaty terminowej (y). Długość rozmowy może być znacząca, dlatego że może świadczyć o większym zainteresowaniu. Im dłużej prowadzona jest rozmowa tym bliższy jest temat konsumentowi przez co jest bardziej chętny do subskrypcji lokaty.
 
 ```{r}
 plyr::count(Data, "y")
@@ -191,3 +192,9 @@ conf_matrix_model_svm <- confusionMatrix(data = as.factor(result$predictions),
                                          reference = as.factor(result$y))
 conf_matrix_model_svm
 ```
+
+
+```{r}
+
+```
+

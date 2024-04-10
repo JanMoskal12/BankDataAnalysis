@@ -47,6 +47,16 @@ sum(is.na(dane1$contact))
 dane1 <- na.omit(dane1)
 ```
 
+
+```{r}
+colSums(is.na(dane1))
+```
+
+```{r}
+table(dane1$poutcome)
+dane1$poutcome <- str_replace_all(dane1$poutcome,"unknown","no")
+```
+
 ```{r}
 dane1$marital <- match(dane1$marital, c("single", "married", "divorced"))
 dane1$housing <- ifelse(dane1$housing == "yes", 1, 0)
@@ -63,14 +73,6 @@ dane1$y <- as.factor(dane1$y)
 
 
 
-```{r}
-colSums(is.na(dane1))
-```
-
-```{r}
-table(dane1$poutcome)
-dane1$poutcome <- str_replace_all(dane1$poutcome,"unknown","no")
-```
 
 # Regresja logistyczna
 
@@ -151,7 +153,7 @@ wf_best <- finalize_workflow(wf_log, best)
 wf_best_fit <- wf_best %>% 
   fit(train_dane1)
 
-saveRDS(wf_best_fit,"wfbest_regresja_train.rds")
+saveRDS(wf_best_fit,"wfbest_regresja_fit.rds")
 
 predict(wf_best_fit, test_dane1)
 ```
@@ -224,7 +226,7 @@ wf_best <- finalize_workflow(wf_boost, best)
 wf_best_fit <- wf_best %>% 
   fit(train_dane1)
 
-saveRDS(wf_best_fit,"wfbest_boosting_train.rds")
+saveRDS(wf_best_fit,"wfbest_boosting_fit.rds")
 
 predict(wf_best_fit, test_dane1)
 ```
