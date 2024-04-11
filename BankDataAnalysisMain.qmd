@@ -215,7 +215,7 @@ ggplot(Data, aes(x=y))+
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-Mamy doczynienie z niezbalansowaniem danych, co będzie istotne w procesie tworzenia modeli
+Mamy do czynienia z niezbalansowaniem danych, co będzie istotne w procesie tworzenia modeli.
 
 ## Budowa modeli
 
@@ -249,11 +249,14 @@ summary_table |>
              palette = "red",
              apply_to = "text") 
 ```
+Na pierwszy rzut oka widać, że boosting wypada najlepiej ze wszystkich modeli. Zaraz za nim jest Random Forest, który też dobrze radzi sobie z zadaniem klasyfikacji.
+
 
 ```{r}
 load("wykresy/curve.rda")
 curve 
 ```
+Na krzywej roc auc najgorzej wypada model KNN, a najlepiej wcześniej wspomniany XGBoost.
 
 ```{r warning=FALSE, message=FALSE}
 # data <- readRDS("Dane_czyste.rds")
@@ -274,8 +277,6 @@ curve
 # library(ggplot2)
 # 
 # ggsave("wykresy/conf_mat.png")
-
-
 ```
 
 ![](wykresy/conf_mat.png)
