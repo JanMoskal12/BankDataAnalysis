@@ -11,6 +11,8 @@ train <- training(data_split)
 test_data <- testing(data_split)
 
 
+# tabela
+
 rf_fit <- readRDS("modele/wf_rf_best_fit.rds")
 
 pred <- predict(rf_fit, new_data=test_data)
@@ -21,6 +23,8 @@ rf_metrics <- met(data=pred, truth=y, estimate=.pred_class)
 rf_metrics <- rf_metrics[,3]
 colnames(rf_metrics) <- c("Random Forest")
 rf_metrics
+
+
 
 
 metric_names <- matrix(c("F1 score", "Accuracy", "Sensitivity", "Specificity", "Recall", "J index"), ncol=1)
@@ -84,11 +88,41 @@ summary_table <- metric_names |>
 
 summary_table
 
+# roc_auc do tabeli
+
+roc <- c("roc_auc")
+
+pred2 <- predict(rf_fit, new_data=test_data, type = "prob")
+pred2 <- cbind(test_data, pred2)
+roc <- c(roc, roc_auc(pred2,"y", ".pred_0")$.estimate)
+
+pred2 <- predict(svm_fit, new_data=test_data, type = "prob")
+pred2 <- cbind(test_data, pred2)
+roc <- c(roc, roc_auc(pred2,"y", ".pred_0")$.estimate)
+
+pred2 <- predict(knn_fit, new_data=test_data, type = "prob")
+pred2 <- cbind(test_data, pred2)
+roc <- c(roc, roc_auc(pred2,"y", ".pred_0")$.estimate)
+
+pred2 <- predict(tree_fit, new_data=test_data, type = "prob")
+pred2 <- cbind(test_data, pred2)
+roc <- c(roc, roc_auc(pred2,"y", ".pred_0")$.estimate)
+
+pred2 <- predict(log_fit, new_data=test_data, type = "prob")
+pred2 <- cbind(test_data, pred2)
+roc <- c(roc, roc_auc(pred2,"y", ".pred_0")$.estimate)
+
+pred2 <- predict(boost_fit, new_data=test_data, type = "prob")
+pred2 <- cbind(test_data, pred2)
+roc <- c(roc, roc_auc(pred2,"y", ".pred_0")$.estimate)
+
+summary_table <- rbind(summary_table, roc)
+
 save(summary_table, file="wykresy/model_summary_table.rda")
 
 
 
-
+# curve
 
 rf_pred <- predict(rf_fit, new_data=test_data, type = "prob") %>% 
   bind_cols(test_data)
@@ -143,30 +177,45 @@ save(curve, file="wykresy/curve.rda")
 
 
 
+# porówananie workflow 
 
+# boost_wf <- readRDS("workflows/wf_boost_train.rds")
+# log_wf <- readRDS("workflows/wf_regresja_train.rds")
+# knn_wf <- readRDS("workflows/wf_knn_best_train.rds")
+# tree_wf <- readRDS("workflows/wf_tree_best.rds")
+
+load("workflows/models_fits.rda")
 rf_wf <- readRDS("workflows/wf_rf_train.rds")
 svm_wf <- readRDS("workflows/wf_svm_train.rds")
-boost_wf <- readRDS("workflows/wf_boost_train.rds")
-log_wf <- readRDS("workflows/wf_regresja_train.rds")
-knn_wf <- readRDS("workflows/wf_knn_best_train.rds")
-tree_wf <- readRDS("workflows/wf_tree_best.rds")
 
-rf_wf |> collect_metrics()
 
-six_models <- as_workflow_set(rf = rf_wf, svm = svm_wf, log = log_wf, boost = boost_wf)
 
-six_models |> autoplot(metric = "roc_auc", select_best = TRUE)+
+
+
+six_models <- as_workflow_set(Random_Forest = rf_wf, 
+                              SVM = svm_wf, 
+                              Log_regression = wf_train_log, 
+                              XGBoost = wf_train_boost, 
+                              Decision_tree = wf_tree_train, 
+                              KNN = wf_knn_train)
+
+workflows_roc_auc <- six_models |> autoplot(metric = "roc_auc", select_best = TRUE)+
   geom_text_repel(aes(label = wflow_id), nudge_x = 1/8, nudge_y = 1/100) +
   theme_bw()+
   theme(legend.position = "none")
 
-six_models |> autoplot(metric = "accuracy", select_best = TRUE)+
+save(workflows_roc_auc, file = "wykresy/workflows_roc_auc.rda")
+
+
+
+workflows_acc <- six_models |> autoplot(metric = "accuracy", select_best = TRUE)+
   geom_text_repel(aes(label = wflow_id), nudge_x = 1/8, nudge_y = 1/100) +
   theme_bw()+
   theme(legend.position = "none")
+save(workflows_acc, file = "wykresy/workflows_acc.rda")
 
 
-six_models |> autoplot(select_best = TRUE)+
+six_models |> autoplot()+
   geom_text_repel(aes(label = wflow_id), nudge_x = 1/8, nudge_y = 1/100) +
   theme_bw()+
   theme(legend.position = "none")

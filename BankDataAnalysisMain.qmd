@@ -200,7 +200,7 @@ load("wykresy/model_summary_table.rda")
 summary_table |> 
   gt() |> 
   data_color(columns = 7,
-             rows = c(1,2,3,5),
+             rows = c(1,2,3,5,7),
              palette = "#4bff4b",
              apply_to = "text") |> 
   data_color(columns = 6,
@@ -218,7 +218,11 @@ summary_table |>
   data_color(columns = 2,
              rows = c(4),
              palette = "red",
-             apply_to = "text")
+             apply_to = "text") |> 
+  data_color(columns = 4,
+             rows = 7,
+             palette = "red",
+             apply_to = "text") 
 ```
 
 
