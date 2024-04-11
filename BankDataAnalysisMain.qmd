@@ -27,63 +27,62 @@ Dataframe_base <- read_csv2("bank-full.csv")
 
 ```{r}
 #colSums(is.na(Data)) #Sprawdzenie braków danych
+unique(Data$contact)
 ```
+
+## Zbiór danych
+
+Do dyspozycji mamy dane dotyczące kampanii marketingowej Portugalskiego banku. Naszym zadaniem było przewidywanie czy klient założy w tym banku lokatę terminową.
+
+Zbiór danych zawiera następujące informacje:
+
+-   Age - Wiek.
+
+-   Job - Rodzaj wykonywanej pracy.
+
+-   Marital - Status cywilny.
+
+-   Education - Poziom wykształcenia.
+
+-   Default - Czy ma niespłacony kredyt?
+
+-   Balance: Średni roczny balans konta (w euro).
+
+-   Housing: Czy ma kredyt mieszkaniowy?
+
+-   Loan: Czy ma pożyczkę osobistą?
+
+-   Contact: Typ komunikacji
+
+-   Day: Dzień miesiąca ostatniego kontaktu.
+
+-   Month: Miesiąc ostatniego kontaktu.
+
+-   Duration: Długość ostatniego kontaktu (w sekundach).
+
+-   Campaign: Liczba kontaktów w trakcie obecnaj kampanii z danym klientem.
+
+-   Pdays: Liczba dni od ostatniego kontaktu podczas poprzedniej kampanii.
+
+-   Previous: Liczba kontaktów z danym klientem przed obecną kampanią.
+
+-   Poutcome: Wynik poprzedniej kampanii marketingowej.
+
+-   Y: Czy klient utworzył lokatę terminową?
 
 ## Eksploracja danych
 
-
-
 ```{r}
-# Data %>%
-#   count(age, sort = TRUE)
+d <- Dataframe_base %>% 
+      mutate(y = ifelse(y == "yes", 1, 0))
 
-Data |>
-  ggplot(aes(x = age)) +
-  geom_histogram(bins = 78) + 
-  scale_x_continuous(breaks = seq(18,95,by=5)) +
-  theme_bw()+
-  labs(title = "Rozkład wieku klientów")+
-  theme(plot.title = element_text(hjust = 0.5))
- 
+Dataframe_numeric <- d[sapply(d, class) != "character"]
+corr <- cor_mat(Dataframe_numeric)
+p_mat <- cor_pmat(Dataframe_numeric)
+ggcorrplot(corr, p.mat = p_mat,lab = T)
 ```
 
-Najwięcej klientów banku jest w wieku 32 lat. Występuje nagły spadek klientów w wieku powyżej 60 lat.
-
-
-
-```{r}
-Data %>%
-  group_by(age) %>%
-  ggplot(aes(x = age, fill = y)) +
-  geom_bar(position = "fill") +
-  labs(x = NULL, y = "Proportion of term deposit subscriptions", fill = "Has the client subscribed a term deposit?") +
-  theme_bw()+
-  labs(title = "Wykres zależności między wiekiem a lokatą")+
-  theme(legend.position = "bottom",plot.title = element_text(hjust = 0.5))
-  
-```
-
-Istnieje związek pomiędzy wiekiem, a skłonnością do zakładania lokat. Młodzi oraz seniorzy są bardziej skłonni do zakładania lokat w porównaniu do osób w średnim wieku.
-
-
-
-
-```{r}
-Data %>%
-  group_by(y) %>%
-  summarise(avg_balance = mean(balance)) |> 
-  ggplot(aes(x = y, y = avg_balance, fill = y)) +
-  geom_bar(stat = "identity")+
-  theme_bw()+
-  labs(title = "Średnie saldo konta klientów w zależności czy posiadają lokatę",
-       x= "", y = "średni balans")+
-  theme(plot.title = element_text(hjust = 0.5))
-
-```
-
-Osoby z większym saldem konta mają większą skłonność do pozostawienia pieniędzy na lokacie.
-
-
+Poza czasem trwania rozmowy żadna inna zmienna numeryczna nie jest istotnie skorelowana z subskrybcją lokaty terminowej (y). Długość rozmowy może być znacząca, dlatego że może świadczyć o większym zainteresowaniu. Im dłużej prowadzona jest rozmowa tym bliższy jest temat konsumentowi przez co jest bardziej chętny do subskrypcji lokaty.
 
 ```{r}
 Data %>%
@@ -103,7 +102,53 @@ Data %>%
 
 Widać, że jest sporo więcej krótszych rozmów. Wydaje się, że istnieje związek pomiędzy czasem trwania ostatniego kontaktu a subskrypcją. Dłuższe kontakty mają zwykle większą liczbę subskrypcji w porównaniu do krótszych kontaktów.
 
+```{r}
+# Data %>%
+#   count(age, sort = TRUE)
 
+Data |>
+  ggplot(aes(x = age)) +
+  #geom_freqpoly(color = "blue")+
+  geom_histogram(bins = 78, fill = "lightblue") + 
+  scale_x_continuous(breaks = seq(18,95,by=5)) +
+  theme_bw()+
+  labs(title = "Rozkład wieku klientów",
+       x = "Wiek",
+       y = "Liczba klientów")+
+  theme(plot.title = element_text(hjust = 0.5))
+ 
+```
+
+Najwięcej klientów banku jest w wieku 32 lat. Występuje nagły spadek klientów w wieku powyżej 60 lat.
+
+```{r}
+Data %>%
+  group_by(age) %>%
+  ggplot(aes(x = age, fill = y)) +
+  geom_bar(position = "fill") +
+  labs(x = NULL, y = "Proportion of term deposit subscriptions", fill = "Has the client subscribed a term deposit?") +
+  theme_bw()+
+  labs(title = "Wykres zależności między wiekiem a lokatą")+
+  theme(legend.position = "bottom",plot.title = element_text(hjust = 0.5))
+  
+```
+
+Istnieje związek pomiędzy wiekiem, a skłonnością do zakładania lokat. Młodzi oraz seniorzy są bardziej skłonni do zakładania lokat w porównaniu do osób w średnim wieku.
+
+```{r}
+Data %>%
+  group_by(y) %>%
+  summarise(avg_balance = mean(balance)) |> 
+  ggplot(aes(x = y, y = avg_balance, fill = y)) +
+  geom_bar(stat = "identity")+
+  theme_bw()+
+  labs(title = "Średnie saldo konta klientów w zależności czy posiadają lokatę",
+       x= "", y = "średni balans")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+Osoby z większym saldem konta mają większą skłonność do pozostawienia pieniędzy na lokacie.
 
 ```{r}
 Data %>%
@@ -119,8 +164,6 @@ Data %>%
 
 Oznacza to, że wynik poprzedniej kampanii może mieć wpływ na zachowania subskrypcyjne w bieżącej kampanii, co sugeruje związek między tymi zmiennymi.
 
-
-
 ```{r}
 Data %>%
   ggplot(aes(x = marital, fill = y)) +
@@ -129,12 +172,8 @@ Data %>%
   labs(title = "Chęć założenia lokaty w zależności od stanu cywilnego")+
   theme(plot.title = element_text(hjust=0.5))
 ```
+
 Nie ma widocznego związku między stanem cywilnym a założeniem lokaty długoterminowej.
-
-
-
-
-
 
 ```{r}
 Data %>%
@@ -148,8 +187,6 @@ Data %>%
 ```
 
 Dane sugerują, że status stanowiska może mieć pewien wpływ na subskrypcję lokaty terminowej, o czym świadczy różna liczba wyników w różnych kategoriach stanowisk. Jednak ta relacja nie jest prosta ani spójna w przypadku wszystkich typów stanowisk, co wskazuje, że inne czynniki mogą również odgrywać rolę w określaniu zachowania subskrypcji.
-
-
 
 ```{r}
 Data %>%
@@ -168,18 +205,6 @@ Data %>%
 Dane sugerują związek pomiędzy poziomem wykształcenia a abonamentem na lokatę terminową. Wydaje się, że wyższy poziom wykształcenia, zwłaszcza wyższego, wiąże się z większym prawdopodobieństwem zapisania się na lokatę terminową.
 
 ```{r}
-d <- Dataframe_base %>% 
-      mutate(y = ifelse(y == "yes", 1, 0))
-
-Dataframe_numeric <- d[sapply(d, class) != "character"]
-corr <- cor_mat(Dataframe_numeric)
-p_mat <- cor_pmat(Dataframe_numeric)
-ggcorrplot(corr, p.mat = p_mat,lab = T)
-```
-
-Poza czasem trwania rozmowy żadna zmienna numeryczna nie jest istotnie skorelowana z subskrybcją lokaty terminowej (y). Długość rozmowy może być znacząca, dlatego że może świadczyć o większym zainteresowaniu. Im dłużej prowadzona jest rozmowa tym bliższy jest temat konsumentowi przez co jest bardziej chętny do subskrypcji lokaty.
-
-```{r}
 #plyr::count(Data, "y")
 
 ggplot(Data, aes(x=y))+
@@ -189,8 +214,8 @@ ggplot(Data, aes(x=y))+
        y = "Liczba obserwacji")+
   theme(plot.title = element_text(hjust = 0.5))
 ```
-Mamy doczynienie z niezbalansowaniem danych, co będzie istotne w procesie tworzenia modeli
 
+Mamy doczynienie z niezbalansowaniem danych, co będzie istotne w procesie tworzenia modeli
 
 ## Budowa modeli
 
@@ -225,29 +250,32 @@ summary_table |>
              apply_to = "text") 
 ```
 
-
-
 ```{r}
 load("wykresy/curve.rda")
 curve 
 ```
 
+```{r warning=FALSE, message=FALSE}
+# data <- readRDS("Dane_czyste.rds")
+# 
+# set.seed(2000)
+# 
+# 
+# data_split <- initial_split(data, 0.85)
+# train <- training(data_split)
+# test_data <- testing(data_split)
+# boost_fit <- readRDS("modele/wfbest_boosting_fit.rds")
+# 
+# pred <- predict(boost_fit, new_data=test_data)
+# pred <- cbind(pred, test_data)
+# conf_mat_boost <- conf_mat(pred, truth=y, estimate=.pred_class) |>
+#   autoplot(type = "heatmap")
+# 
+# library(ggplot2)
+# 
+# ggsave("wykresy/conf_mat.png")
 
-```{r}
-data <- readRDS("Dane_czyste.rds")
 
-set.seed(2000)
-
-
-data_split <- initial_split(data, 0.85)
-train <- training(data_split)
-test_data <- testing(data_split)
-boost_fit <- readRDS("modele/wfbest_boosting_fit.rds")
-
-pred <- predict(boost_fit, new_data=test_data)
-pred <- cbind(pred, test_data)
-conf_mat_boost <- conf_mat(pred, truth=y, estimate=.pred_class)
-
-
-autoplot(conf_mat_boost, type = "heatmap")
 ```
+
+![](wykresy/conf_mat.png)
