@@ -246,7 +246,11 @@ Modela jakie stworzyliśmy to:
 
 -   SVM
 
--   Logistic Regression Do tunowania hiperparametrów wykorzystywaliśmy walidację krzyżową.
+-   Logistic Regression 
+
+
+
+Do tunowania hiperparametrów wykorzystywaliśmy walidację krzyżową.
 
 ```{r}
 load("wykresy/model_summary_table.rda")
