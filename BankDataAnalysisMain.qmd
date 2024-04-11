@@ -27,7 +27,6 @@ Dataframe_base <- read_csv2("bank-full.csv")
 
 ```{r}
 #colSums(is.na(Data)) #Sprawdzenie braków danych
-unique(Data$contact)
 ```
 
 ## Zbiór danych
@@ -229,7 +228,7 @@ d <- Data %>%
 pie(d$n, labels = c("TRUE", "FALSE"), radius = 1, col = c("orange", "blue"), border = "white", main = "Podział wartości y")
 ```
 
-Mamy doczynienie z niezbalansowaniem danych, co będzie istotne w procesie tworzenia modeli
+Mamy do czynienia z niezbalansowaniem danych, co będzie istotne w procesie tworzenia modeli
 
 ## Budowa modeli
 
@@ -264,9 +263,27 @@ summary_table |>
              apply_to = "text") 
 ```
 
+Na pierwszy rzut oka widać, że Boosting jest najbardziej efektywnym modelem. Zaraz po nim najlepiej z zadaniem klasyfikacji radzi sobie Random Forest.
+
 ```{r}
 load("wykresy/curve.rda")
 curve 
+```
+
+Na wykresie krzywych roc auc najgorzej wyszedł model KNN. Najlepiej wspomniany wcześniej XGBoost.
+
+
+```{r}
+load("wykresy/workflows_acc.rda")
+workflows_acc
+```
+
+
+
+```{r}
+
+load("wykresy/workflows_roc_auc.rda")
+workflows_roc_auc
 ```
 
 ```{r warning=FALSE, message=FALSE}
