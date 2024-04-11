@@ -126,7 +126,7 @@ Data %>%
   group_by(age) %>%
   ggplot(aes(x = age, fill = y)) +
   geom_bar(position = "fill") +
-  labs(x = NULL, y = "Proportion of term deposit subscriptions", fill = "Has the client subscribed a term deposit?") +
+  labs(x = "Wiek", y = NULL, fill = "y") +
   theme_bw()+
   labs(title = "Wykres zależności między wiekiem a lokatą")+
   theme(legend.position = "bottom",plot.title = element_text(hjust = 0.5))
@@ -136,15 +136,15 @@ Data %>%
 Istnieje związek pomiędzy wiekiem, a skłonnością do zakładania lokat. Młodzi oraz seniorzy są bardziej skłonni do zakładania lokat w porównaniu do osób w średnim wieku.
 
 ```{r warning=FALSE}
-Data %>%
-  group_by(y) %>%
-  summarise(avg_balance = mean(balance)) |> 
-  ggplot(aes(x = y, y = avg_balance, fill = y)) +
-  geom_bar(stat = "identity")+
-  theme_bw()+
-  labs(title = "Średnie saldo konta klientów w zależności czy posiadają lokatę",
-       x= "", y = "średni balans")+
-  theme(plot.title = element_text(hjust = 0.5))
+# Data %>%
+#   group_by(y) %>%
+#   summarise(avg_balance = mean(balance)) |> 
+#   ggplot(aes(x = y, y = avg_balance, fill = y)) +
+#   geom_bar(stat = "identity")+
+#   theme_bw()+
+#   labs(title = "Średnie saldo konta klientów w zależności czy posiadają lokatę",
+#        x= "", y = "średni balans")+
+#   theme(plot.title = element_text(hjust = 0.5))
 
 
 Data %>% 
@@ -152,8 +152,9 @@ Data %>%
   ggplot(aes(x = y, y = balance, fill = y)) + 
   geom_boxplot() +
   scale_y_log10(labels = comma) +
+  labs(title = "Związek balansu konta z chęcia założenia lokaty", y = "Balans konta") +
   theme_bw() +
-  theme(legend.position = "none")
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))
 
 ```
 
@@ -178,7 +179,7 @@ Data %>%
   ggplot(aes(x = marital, fill = y)) +
   geom_bar(position = "fill")+
   theme_bw()+
-  labs(title = "Chęć założenia lokaty w zależności od stanu cywilnego")+
+  labs(title = "Chęć założenia lokaty w zależności od stanu cywilnego", x = "", y = "")+
   theme(plot.title = element_text(hjust=0.5))
 ```
 
@@ -246,7 +247,7 @@ Modela jakie stworzyliśmy to:
 -   SVM
 
 -   Logistic Regression
-
+Do tunowania hiperparametrów wykorzystywaliśmy walidację krzyżową.
 ```{r}
 load("wykresy/model_summary_table.rda")
 
