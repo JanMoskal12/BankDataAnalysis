@@ -248,3 +248,20 @@ data_modeling <- data_modeling %>%
   )
 
 ```
+
+d \<- Data %\>%
+
+count(y)
+
+pie(d\$n, labels = c("TRUE", "FALSE"), radius = 1, col = c("orange", "blue"), border = "white", main = "Podział wartości y")
+
+```{r}
+ggplot(Data, aes(x=y))+
+  geom_bar(fill = "lightgreen")+
+  theme_bw()+
+  labs(title = "Zbalansowanie danych",
+       y = "Liczba obserwacji")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+```

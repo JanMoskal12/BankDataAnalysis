@@ -135,7 +135,7 @@ Data %>%
 
 Istnieje związek pomiędzy wiekiem, a skłonnością do zakładania lokat. Młodzi oraz seniorzy są bardziej skłonni do zakładania lokat w porównaniu do osób w średnim wieku.
 
-```{r}
+```{r warning=FALSE}
 Data %>%
   group_by(y) %>%
   summarise(avg_balance = mean(balance)) |> 
@@ -145,6 +145,15 @@ Data %>%
   labs(title = "Średnie saldo konta klientów w zależności czy posiadają lokatę",
        x= "", y = "średni balans")+
   theme(plot.title = element_text(hjust = 0.5))
+
+
+Data %>% 
+  group_by(y) %>% 
+  ggplot(aes(x = y, y = balance, fill = y)) + 
+  geom_boxplot() +
+  scale_y_log10(labels = comma) +
+  theme_bw() +
+  theme(legend.position = "none")
 
 ```
 
@@ -207,15 +216,20 @@ Dane sugerują związek pomiędzy poziomem wykształcenia a abonamentem na lokat
 ```{r}
 #plyr::count(Data, "y")
 
-ggplot(Data, aes(x=y))+
-  geom_bar(fill = "lightgreen")+
-  theme_bw()+
-  labs(title = "Zbalansowanie danych",
-       y = "Liczba obserwacji")+
-  theme(plot.title = element_text(hjust = 0.5))
+# ggplot(Data, aes(x=y))+
+#   geom_bar(fill = "lightgreen")+
+#   theme_bw()+
+#   labs(title = "Zbalansowanie danych",
+#        y = "Liczba obserwacji")+
+#   theme(plot.title = element_text(hjust = 0.5))
+
+d <- Data %>% 
+      count(y)
+
+pie(d$n, labels = c("TRUE", "FALSE"), radius = 1, col = c("orange", "blue"), border = "white", main = "Podział wartości y")
 ```
 
-Mamy do czynienia z niezbalansowaniem danych, co będzie istotne w procesie tworzenia modeli.
+Mamy doczynienie z niezbalansowaniem danych, co będzie istotne w procesie tworzenia modeli
 
 ## Budowa modeli
 
@@ -249,14 +263,11 @@ summary_table |>
              palette = "red",
              apply_to = "text") 
 ```
-Na pierwszy rzut oka widać, że boosting wypada najlepiej ze wszystkich modeli. Zaraz za nim jest Random Forest, który też dobrze radzi sobie z zadaniem klasyfikacji.
-
 
 ```{r}
 load("wykresy/curve.rda")
 curve 
 ```
-Na krzywej roc auc najgorzej wypada model KNN, a najlepiej wcześniej wspomniany XGBoost.
 
 ```{r warning=FALSE, message=FALSE}
 # data <- readRDS("Dane_czyste.rds")
@@ -277,6 +288,8 @@ Na krzywej roc auc najgorzej wypada model KNN, a najlepiej wcześniej wspomniany
 # library(ggplot2)
 # 
 # ggsave("wykresy/conf_mat.png")
+
+
 ```
 
 ![](wykresy/conf_mat.png)
