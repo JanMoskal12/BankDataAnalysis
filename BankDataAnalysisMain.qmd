@@ -6,6 +6,7 @@ format:
 editor: visual
 execute: 
   echo: false
+toc: true
 ---
 
 ```{r echo=FALSE, message=FALSE, warning= FALSE}
@@ -232,6 +233,20 @@ Mamy do czynienia z niezbalansowaniem danych, co będzie istotne w procesie twor
 
 ## Budowa modeli
 
+Modela jakie stworzyliśmy to:
+
+-   Random Forest
+
+-   Decision Tree
+
+-   XGBoost
+
+-   KNN
+
+-   SVM
+
+-   Logistic Regression
+
 ```{r}
 load("wykresy/model_summary_table.rda")
 
@@ -272,13 +287,10 @@ curve
 
 Na wykresie krzywych roc auc najgorzej wyszedł model KNN. Najlepiej wspomniany wcześniej XGBoost.
 
-
 ```{r}
 load("wykresy/workflows_acc.rda")
 workflows_acc
 ```
-
-
 
 ```{r}
 
@@ -310,3 +322,7 @@ workflows_roc_auc
 ```
 
 ![](wykresy/conf_mat.png)
+
+## Wnioski końcowe
+
+Przy tworzeniu tego projektu nauczyliśmy się rozwiązywać niespotkane do tej pory problemy, takie jak niezbalansowanie danych czy praca pod presją czasu ;). Nauczyliśmy się pracy z biblioteką tidymodels. Poznaliśmy nowe modele uczenia maszynowego oraz poprawiliśmy umiejętności pracy w grupie.
